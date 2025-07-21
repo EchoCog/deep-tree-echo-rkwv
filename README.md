@@ -224,7 +224,7 @@ We welcome contributions to the Deep Tree Echo WebVM-RWKV integration! Please se
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the AGPL License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
