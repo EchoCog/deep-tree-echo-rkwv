@@ -1,0 +1,427 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Tree Echo - Cognitive Interface</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: rgba(0,0,0,0.3);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 1.8em;
+        }
+        .session-info {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        .main-container {
+            flex: 1;
+            display: flex;
+            padding: 20px;
+            gap: 20px;
+            overflow: hidden;
+        }
+        .chat-container {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .chat-header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            max-height: calc(100vh - 300px);
+        }
+        .message {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            animation: fadeIn 0.3s ease-in;
+        }
+        .user-message {
+            background: rgba(33, 150, 243, 0.3);
+            margin-left: 20%;
+            text-align: right;
+        }
+        .echo-message {
+            background: rgba(76, 175, 80, 0.3);
+            margin-right: 20%;
+        }
+        .system-message {
+            background: rgba(255, 193, 7, 0.3);
+            text-align: center;
+            font-style: italic;
+        }
+        .message-meta {
+            font-size: 0.8em;
+            opacity: 0.7;
+            margin-top: 8px;
+        }
+        .chat-input {
+            padding: 20px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+        .input-group input {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.9);
+            color: #333;
+            font-size: 1em;
+        }
+        .input-group button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            background: #4CAF50;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1em;
+        }
+        .input-group button:hover {
+            background: #45a049;
+        }
+        .input-group button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        .sidebar {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .info-panel {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .info-panel h3 {
+            margin: 0 0 15px 0;
+            color: #4CAF50;
+        }
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .metric:last-child {
+            border-bottom: none;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #4CAF50;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .membrane-status {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .membrane-item {
+            background: rgba(0,0,0,0.2);
+            padding: 8px;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧠 Deep Tree Echo - Cognitive Interface</h1>
+        <div class="session-info">
+            Session: <span id="sessionId">Initializing...</span>
+        </div>
+    </div>
+    
+    <div class="main-container">
+        <div class="chat-container">
+            <div class="chat-header">
+                <h3>Cognitive Conversation</h3>
+                <p>Interact with the Deep Tree Echo cognitive architecture. Your inputs will be processed through memory, reasoning, and grammar membranes.</p>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                <div class="message system-message">
+                    <strong>System:</strong> Initializing cognitive session...
+                </div>
+            </div>
+            
+            <div class="chat-input">
+                <div class="input-group">
+                    <input type="text" id="userInput" placeholder="Enter your message or question..." disabled>
+                    <button id="sendButton" onclick="sendMessage()" disabled>Send</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="sidebar">
+            <div class="info-panel">
+                <h3>Session Status</h3>
+                <div class="metric">
+                    <span>Status:</span>
+                    <span id="sessionStatus">Initializing</span>
+                </div>
+                <div class="metric">
+                    <span>Messages:</span>
+                    <span id="messageCount">0</span>
+                </div>
+                <div class="metric">
+                    <span>Avg Response Time:</span>
+                    <span id="avgResponseTime">0ms</span>
+                </div>
+                <div class="metric">
+                    <span>Memory Items:</span>
+                    <span id="memoryItems">0</span>
+                </div>
+            </div>
+            
+            <div class="info-panel">
+                <h3>Membrane Status</h3>
+                <div class="membrane-status">
+                    <div class="membrane-item">💭 Memory<br><span id="memoryStatus">Active</span></div>
+                    <div class="membrane-item">⚡ Reasoning<br><span id="reasoningStatus">Active</span></div>
+                    <div class="membrane-item">🎭 Grammar<br><span id="grammarStatus">Active</span></div>
+                    <div class="membrane-item">🤖 RWKV<br><span id="rwkvStatus">Mock</span></div>
+                </div>
+            </div>
+            
+            <div class="info-panel">
+                <h3>Quick Actions</h3>
+                <button class="input-group button" onclick="clearConversation()" style="width: 100%; margin-bottom: 10px;">Clear Conversation</button>
+                <button class="input-group button" onclick="exportConversation()" style="width: 100%; margin-bottom: 10px;">Export History</button>
+                <button class="input-group button" onclick="window.location.href='/'" style="width: 100%;">Back to Dashboard</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentSessionId = null;
+        let messageCount = 0;
+        let totalResponseTime = 0;
+        
+        // Initialize session
+        async function initializeSession() {
+            try {
+                const response = await fetch('/api/session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                currentSessionId = data.session_id;
+                
+                document.getElementById('sessionId').textContent = currentSessionId.substring(0, 8) + '...';
+                document.getElementById('sessionStatus').textContent = 'Active';
+                document.getElementById('userInput').disabled = false;
+                document.getElementById('sendButton').disabled = false;
+                
+                addSystemMessage('Cognitive session initialized. Ready for interaction.');
+                
+            } catch (error) {
+                addSystemMessage('Error initializing session: ' + error.message);
+            }
+        }
+        
+        // Send message
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const sendButton = document.getElementById('sendButton');
+            const message = input.value.trim();
+            
+            if (!message || !currentSessionId) return;
+            
+            // Disable input
+            input.disabled = true;
+            sendButton.disabled = true;
+            sendButton.innerHTML = '<span class="loading"></span>';
+            
+            // Add user message
+            addUserMessage(message);
+            input.value = '';
+            
+            try {
+                const startTime = Date.now();
+                
+                const response = await fetch('/api/process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        session_id: currentSessionId,
+                        input: message
+                    })
+                });
+                
+                const result = await response.json();
+                const responseTime = Date.now() - startTime;
+                
+                // Add echo response
+                addEchoMessage(result.response, responseTime, result.membrane_outputs);
+                
+                // Update metrics
+                messageCount++;
+                totalResponseTime += responseTime;
+                updateMetrics();
+                
+            } catch (error) {
+                addSystemMessage('Error processing message: ' + error.message);
+            } finally {
+                // Re-enable input
+                input.disabled = false;
+                sendButton.disabled = false;
+                sendButton.textContent = 'Send';
+                input.focus();
+            }
+        }
+        
+        // Add messages to chat
+        function addUserMessage(message) {
+            const messagesDiv = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message user-message';
+            messageDiv.innerHTML = `
+                <strong>You:</strong> ${message}
+                <div class="message-meta">${new Date().toLocaleTimeString()}</div>
+            `;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        function addEchoMessage(message, responseTime, membraneOutputs) {
+            const messagesDiv = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message echo-message';
+            
+            let membraneInfo = '';
+            if (membraneOutputs) {
+                membraneInfo = `
+                    <details style="margin-top: 10px;">
+                        <summary style="cursor: pointer; opacity: 0.8;">Membrane Details</summary>
+                        <div style="margin-top: 8px; font-size: 0.9em;">
+                            <div><strong>Memory:</strong> ${membraneOutputs.memory}</div>
+                            <div><strong>Reasoning:</strong> ${membraneOutputs.reasoning}</div>
+                            <div><strong>Grammar:</strong> ${membraneOutputs.grammar}</div>
+                        </div>
+                    </details>
+                `;
+            }
+            
+            messageDiv.innerHTML = `
+                <strong>Echo:</strong> ${message}
+                <div class="message-meta">
+                    ${new Date().toLocaleTimeString()} • ${responseTime}ms
+                </div>
+                ${membraneInfo}
+            `;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        function addSystemMessage(message) {
+            const messagesDiv = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message system-message';
+            messageDiv.innerHTML = `
+                <strong>System:</strong> ${message}
+                <div class="message-meta">${new Date().toLocaleTimeString()}</div>
+            `;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        // Update metrics
+        function updateMetrics() {
+            document.getElementById('messageCount').textContent = messageCount;
+            const avgTime = messageCount > 0 ? Math.round(totalResponseTime / messageCount) : 0;
+            document.getElementById('avgResponseTime').textContent = avgTime + 'ms';
+        }
+        
+        // Clear conversation
+        function clearConversation() {
+            if (confirm('Clear conversation history?')) {
+                document.getElementById('chatMessages').innerHTML = '';
+                addSystemMessage('Conversation cleared.');
+                messageCount = 0;
+                totalResponseTime = 0;
+                updateMetrics();
+            }
+        }
+        
+        // Export conversation
+        function exportConversation() {
+            const messages = document.getElementById('chatMessages').innerText;
+            const blob = new Blob([messages], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `echo_conversation_${new Date().toISOString().split('T')[0]}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        // Handle Enter key
+        document.getElementById('userInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        // Initialize on load
+        window.onload = function() {
+            initializeSession();
+        };
+    </script>
+</body>
+</html>

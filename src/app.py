@@ -1,0 +1,1031 @@
+"""
+Deep Tree Echo Integrated Application
+Complete cognitive architecture deployment with RWKV integration for WebVM
+"""
+
+from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask_cors import CORS
+import os
+import json
+import time
+import logging
+import threading
+from datetime import datetime
+from typing import Dict, Any, List, Optional
+import uuid
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Initialize Flask app
+app = Flask(__name__)
+CORS(app, origins="*")
+
+# Global state
+cognitive_sessions = {}
+system_metrics = {
+    'total_sessions': 0,
+    'active_sessions': 0,
+    'total_requests': 0,
+    'start_time': datetime.now(),
+    'last_activity': None
+}
+
+# Configuration
+CONFIG = {
+    'webvm_mode': os.environ.get('ECHO_WEBVM_MODE', 'true').lower() == 'true',
+    'memory_limit_mb': int(os.environ.get('ECHO_MEMORY_LIMIT', '600')),
+    'max_sessions': 10,
+    'session_timeout_minutes': 30,
+    'enable_persistence': True,
+    'data_dir': '/tmp/echo_data'
+}
+
+# Ensure data directory exists
+os.makedirs(CONFIG['data_dir'], exist_ok=True)
+
+class MockCognitiveSession:
+    """Mock cognitive session for demonstration without full RWKV"""
+    
+    def __init__(self, session_id: str):
+        self.session_id = session_id
+        self.created_at = datetime.now()
+        self.last_activity = datetime.now()
+        self.memory_state = {
+            'declarative': {},
+            'procedural': {},
+            'episodic': [],
+            'intentional': {'goals': []}
+        }
+        self.conversation_history = []
+        self.processing_stats = {
+            'total_inputs': 0,
+            'avg_processing_time': 0.0,
+            'memory_usage_mb': 0
+        }
+    
+    def process_input(self, input_text: str) -> Dict[str, Any]:
+        """Process cognitive input through mock membranes"""
+        start_time = time.time()
+        self.last_activity = datetime.now()
+        self.processing_stats['total_inputs'] += 1
+        
+        # Mock membrane processing
+        memory_response = self._process_memory_membrane(input_text)
+        reasoning_response = self._process_reasoning_membrane(input_text)
+        grammar_response = self._process_grammar_membrane(input_text)
+        
+        # Integrate responses
+        integrated_response = self._integrate_responses(
+            memory_response, reasoning_response, grammar_response
+        )
+        
+        processing_time = time.time() - start_time
+        self.processing_stats['avg_processing_time'] = (
+            (self.processing_stats['avg_processing_time'] * (self.processing_stats['total_inputs'] - 1) + processing_time) /
+            self.processing_stats['total_inputs']
+        )
+        
+        # Store in conversation history
+        conversation_entry = {
+            'timestamp': datetime.now().isoformat(),
+            'input': input_text,
+            'response': integrated_response,
+            'processing_time': processing_time,
+            'membrane_outputs': {
+                'memory': memory_response,
+                'reasoning': reasoning_response,
+                'grammar': grammar_response
+            }
+        }
+        
+        self.conversation_history.append(conversation_entry)
+        
+        # Update episodic memory
+        self.memory_state['episodic'].append({
+            'event': input_text,
+            'response': integrated_response,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+        return conversation_entry
+    
+    def _process_memory_membrane(self, input_text: str) -> str:
+        """Mock memory membrane processing"""
+        # Simple keyword-based memory retrieval
+        keywords = input_text.lower().split()
+        
+        if any(word in keywords for word in ['remember', 'recall', 'memory']):
+            return f"Accessing memory systems for: {input_text}. Found {len(self.memory_state['episodic'])} related experiences."
+        elif any(word in keywords for word in ['learn', 'store', 'save']):
+            return f"Storing new information in declarative memory: {input_text}"
+        else:
+            return f"Memory membrane activated. Processing: {input_text}"
+    
+    def _process_reasoning_membrane(self, input_text: str) -> str:
+        """Mock reasoning membrane processing"""
+        keywords = input_text.lower().split()
+        
+        if '?' in input_text:
+            return f"Reasoning membrane engaged for question: {input_text}. Applying deductive and inductive reasoning patterns."
+        elif any(word in keywords for word in ['because', 'therefore', 'if', 'then']):
+            return f"Logical reasoning detected. Analyzing causal relationships in: {input_text}"
+        elif any(word in keywords for word in ['problem', 'solve', 'solution']):
+            return f"Problem-solving mode activated. Breaking down: {input_text}"
+        else:
+            return f"General reasoning applied to: {input_text}"
+    
+    def _process_grammar_membrane(self, input_text: str) -> str:
+        """Mock grammar membrane processing"""
+        word_count = len(input_text.split())
+        sentence_count = input_text.count('.') + input_text.count('!') + input_text.count('?')
+        
+        complexity = 'simple' if word_count < 10 else 'moderate' if word_count < 20 else 'complex'
+        
+        return f"Grammar analysis: {word_count} words, {sentence_count} sentences, {complexity} complexity. Symbolic patterns detected."
+    
+    def _integrate_responses(self, memory: str, reasoning: str, grammar: str) -> str:
+        """Integrate membrane responses into coherent output"""
+        return f"Integrated cognitive response: Drawing from memory ({len(self.memory_state['episodic'])} experiences), applying reasoning patterns, and considering linguistic structure. {memory[:50]}..."
+    
+    def get_state_summary(self) -> Dict[str, Any]:
+        """Get summary of cognitive state"""
+        return {
+            'session_id': self.session_id,
+            'created_at': self.created_at.isoformat(),
+            'last_activity': self.last_activity.isoformat(),
+            'memory_items': {
+                'declarative': len(self.memory_state['declarative']),
+                'procedural': len(self.memory_state['procedural']),
+                'episodic': len(self.memory_state['episodic']),
+                'goals': len(self.memory_state['intentional']['goals'])
+            },
+            'conversation_length': len(self.conversation_history),
+            'processing_stats': self.processing_stats
+        }
+
+def create_cognitive_session() -> str:
+    """Create new cognitive session"""
+    session_id = str(uuid.uuid4())
+    cognitive_sessions[session_id] = MockCognitiveSession(session_id)
+    system_metrics['total_sessions'] += 1
+    system_metrics['active_sessions'] = len(cognitive_sessions)
+    logger.info(f"Created cognitive session: {session_id}")
+    return session_id
+
+def get_cognitive_session(session_id: str) -> Optional[MockCognitiveSession]:
+    """Get cognitive session by ID"""
+    return cognitive_sessions.get(session_id)
+
+def cleanup_expired_sessions():
+    """Clean up expired sessions"""
+    current_time = datetime.now()
+    expired_sessions = []
+    
+    for session_id, session in cognitive_sessions.items():
+        time_diff = current_time - session.last_activity
+        if time_diff.total_seconds() > CONFIG['session_timeout_minutes'] * 60:
+            expired_sessions.append(session_id)
+    
+    for session_id in expired_sessions:
+        del cognitive_sessions[session_id]
+        logger.info(f"Cleaned up expired session: {session_id}")
+    
+    system_metrics['active_sessions'] = len(cognitive_sessions)
+
+# Routes
+
+@app.route('/')
+def index():
+    """Main dashboard"""
+    return render_template('dashboard.html', config=CONFIG, metrics=system_metrics)
+
+@app.route('/cognitive')
+def cognitive_interface():
+    """Cognitive interaction interface"""
+    return render_template('cognitive.html')
+
+@app.route('/api/session', methods=['POST'])
+def create_session():
+    """Create new cognitive session"""
+    try:
+        cleanup_expired_sessions()
+        
+        if len(cognitive_sessions) >= CONFIG['max_sessions']:
+            return jsonify({'error': 'Maximum sessions reached'}), 429
+        
+        session_id = create_cognitive_session()
+        session = get_cognitive_session(session_id)
+        
+        return jsonify({
+            'session_id': session_id,
+            'created_at': session.created_at.isoformat(),
+            'status': 'active'
+        })
+    except Exception as e:
+        logger.error(f"Error creating session: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/session/<session_id>', methods=['GET'])
+def get_session_info(session_id: str):
+    """Get session information"""
+    try:
+        session = get_cognitive_session(session_id)
+        if not session:
+            return jsonify({'error': 'Session not found'}), 404
+        
+        return jsonify(session.get_state_summary())
+    except Exception as e:
+        logger.error(f"Error getting session info: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/process', methods=['POST'])
+def process_cognitive_input():
+    """Process cognitive input"""
+    try:
+        data = request.get_json()
+        if not data or 'input' not in data:
+            return jsonify({'error': 'No input provided'}), 400
+        
+        session_id = data.get('session_id')
+        if not session_id:
+            return jsonify({'error': 'No session ID provided'}), 400
+        
+        session = get_cognitive_session(session_id)
+        if not session:
+            return jsonify({'error': 'Session not found'}), 404
+        
+        input_text = data['input']
+        result = session.process_input(input_text)
+        
+        system_metrics['total_requests'] += 1
+        system_metrics['last_activity'] = datetime.now()
+        
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error processing input: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/conversation/<session_id>')
+def get_conversation_history(session_id: str):
+    """Get conversation history for session"""
+    try:
+        session = get_cognitive_session(session_id)
+        if not session:
+            return jsonify({'error': 'Session not found'}), 404
+        
+        return jsonify({
+            'session_id': session_id,
+            'conversation_history': session.conversation_history,
+            'total_entries': len(session.conversation_history)
+        })
+    except Exception as e:
+        logger.error(f"Error getting conversation history: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/status')
+def system_status():
+    """Get system status"""
+    cleanup_expired_sessions()
+    
+    uptime = datetime.now() - system_metrics['start_time']
+    
+    return jsonify({
+        'status': 'online',
+        'timestamp': datetime.now().isoformat(),
+        'uptime_seconds': uptime.total_seconds(),
+        'config': CONFIG,
+        'metrics': system_metrics,
+        'active_sessions': len(cognitive_sessions),
+        'memory_usage_estimate_mb': len(cognitive_sessions) * 10  # Rough estimate
+    })
+
+@app.route('/api/metrics')
+def detailed_metrics():
+    """Get detailed system metrics"""
+    session_summaries = []
+    for session_id, session in cognitive_sessions.items():
+        session_summaries.append(session.get_state_summary())
+    
+    return jsonify({
+        'system_metrics': system_metrics,
+        'session_summaries': session_summaries,
+        'resource_usage': {
+            'memory_limit_mb': CONFIG['memory_limit_mb'],
+            'estimated_usage_mb': len(cognitive_sessions) * 10,
+            'sessions_count': len(cognitive_sessions),
+            'max_sessions': CONFIG['max_sessions']
+        }
+    })
+
+@app.route('/health')
+def health_check():
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'active_sessions': len(cognitive_sessions)
+    })
+
+# Template directory setup
+template_dir = os.path.join(os.path.dirname(__file__), 'templates')
+os.makedirs(template_dir, exist_ok=True)
+
+# Create dashboard template
+dashboard_template = '''
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Tree Echo - Cognitive Architecture</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .header h1 {
+            font-size: 3.5em;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .header p {
+            font-size: 1.3em;
+            margin: 10px 0;
+            opacity: 0.9;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: rgba(255,255,255,0.1);
+            padding: 25px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        .card h3 {
+            margin: 0 0 20px 0;
+            color: #4CAF50;
+            font-size: 1.4em;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+            animation: pulse 2s infinite;
+        }
+        .status-online { background: #4CAF50; }
+        .status-warning { background: #ff9800; }
+        .status-offline { background: #f44336; }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .metric:last-child {
+            border-bottom: none;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: background 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        .btn:hover {
+            background: #45a049;
+        }
+        .btn-secondary {
+            background: #2196F3;
+        }
+        .btn-secondary:hover {
+            background: #1976D2;
+        }
+        .architecture-diagram {
+            text-align: center;
+            font-family: monospace;
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .membrane {
+            margin: 5px 0;
+            padding: 5px;
+        }
+        .membrane-root { color: #ff6b6b; }
+        .membrane-cognitive { color: #4ecdc4; }
+        .membrane-extension { color: #45b7d1; }
+        .membrane-security { color: #f9ca24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧠 Deep Tree Echo</h1>
+            <p>Membrane-Based Cognitive Architecture with RWKV Integration</p>
+            <p>WebVM Deployment Ready</p>
+        </div>
+        
+        <div class="grid">
+            <div class="card">
+                <h3><span class="status-indicator status-online"></span>System Status</h3>
+                <div class="metric">
+                    <span>Deployment Mode:</span>
+                    <span>{{ 'WebVM' if config.webvm_mode else 'Standard' }}</span>
+                </div>
+                <div class="metric">
+                    <span>Memory Limit:</span>
+                    <span>{{ config.memory_limit_mb }}MB</span>
+                </div>
+                <div class="metric">
+                    <span>Max Sessions:</span>
+                    <span>{{ config.max_sessions }}</span>
+                </div>
+                <div class="metric">
+                    <span>Persistence:</span>
+                    <span>{{ 'Enabled' if config.enable_persistence else 'Disabled' }}</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>📊 Performance Metrics</h3>
+                <div class="metric">
+                    <span>Total Sessions:</span>
+                    <span>{{ metrics.total_sessions }}</span>
+                </div>
+                <div class="metric">
+                    <span>Active Sessions:</span>
+                    <span>{{ metrics.active_sessions }}</span>
+                </div>
+                <div class="metric">
+                    <span>Total Requests:</span>
+                    <span>{{ metrics.total_requests }}</span>
+                </div>
+                <div class="metric">
+                    <span>Uptime:</span>
+                    <span id="uptime">Calculating...</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>🚀 Quick Actions</h3>
+                <p>Start interacting with the cognitive architecture:</p>
+                <a href="/cognitive" class="btn">Launch Cognitive Interface</a>
+                <br><br>
+                <a href="/api/status" class="btn btn-secondary">View API Status</a>
+                <br><br>
+                <a href="/api/metrics" class="btn btn-secondary">Detailed Metrics</a>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3>🏗️ Membrane Architecture</h3>
+            <div class="architecture-diagram">
+                <div class="membrane membrane-root">🎪 Root Membrane (System Boundary)</div>
+                <div class="membrane membrane-cognitive">├── 🧠 Cognitive Membrane (Core Processing)</div>
+                <div class="membrane">│   ├── 💭 Memory Membrane (Storage & Retrieval)</div>
+                <div class="membrane">│   ├── ⚡ Reasoning Membrane (Inference & Logic)</div>
+                <div class="membrane">│   └── 🎭 Grammar Membrane (Symbolic Processing)</div>
+                <div class="membrane membrane-extension">├── 🔌 Extension Membrane (Plugin Container)</div>
+                <div class="membrane">│   ├── 🌍 Browser Membrane</div>
+                <div class="membrane">│   ├── 📊 ML Membrane (RWKV Integration)</div>
+                <div class="membrane">│   └── 🪞 Introspection Membrane</div>
+                <div class="membrane membrane-security">└── 🛡️ Security Membrane (Validation & Control)</div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3>🤖 RWKV Integration Features</h3>
+            <div class="metric">
+                <span>Model Architecture:</span>
+                <span>RWKV-7 (Hybrid RNN-Transformer)</span>
+            </div>
+            <div class="metric">
+                <span>Memory Complexity:</span>
+                <span>Linear (O(1) inference)</span>
+            </div>
+            <div class="metric">
+                <span>Context Length:</span>
+                <span>Theoretically Infinite</span>
+            </div>
+            <div class="metric">
+                <span>WebVM Optimized:</span>
+                <span>Yes (600MB memory limit)</span>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Update uptime
+        function updateUptime() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    const uptimeSeconds = data.uptime_seconds;
+                    const hours = Math.floor(uptimeSeconds / 3600);
+                    const minutes = Math.floor((uptimeSeconds % 3600) / 60);
+                    const seconds = Math.floor(uptimeSeconds % 60);
+                    document.getElementById('uptime').textContent = 
+                        `${hours}h ${minutes}m ${seconds}s`;
+                })
+                .catch(error => {
+                    document.getElementById('uptime').textContent = 'Error';
+                });
+        }
+        
+        // Update every 5 seconds
+        setInterval(updateUptime, 5000);
+        updateUptime();
+    </script>
+</body>
+</html>
+'''
+
+# Create cognitive interface template
+cognitive_template = '''
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Tree Echo - Cognitive Interface</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: rgba(0,0,0,0.3);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 1.8em;
+        }
+        .session-info {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        .main-container {
+            flex: 1;
+            display: flex;
+            padding: 20px;
+            gap: 20px;
+            overflow: hidden;
+        }
+        .chat-container {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .chat-header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            max-height: calc(100vh - 300px);
+        }
+        .message {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            animation: fadeIn 0.3s ease-in;
+        }
+        .user-message {
+            background: rgba(33, 150, 243, 0.3);
+            margin-left: 20%;
+            text-align: right;
+        }
+        .echo-message {
+            background: rgba(76, 175, 80, 0.3);
+            margin-right: 20%;
+        }
+        .system-message {
+            background: rgba(255, 193, 7, 0.3);
+            text-align: center;
+            font-style: italic;
+        }
+        .message-meta {
+            font-size: 0.8em;
+            opacity: 0.7;
+            margin-top: 8px;
+        }
+        .chat-input {
+            padding: 20px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+        .input-group input {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.9);
+            color: #333;
+            font-size: 1em;
+        }
+        .input-group button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            background: #4CAF50;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1em;
+        }
+        .input-group button:hover {
+            background: #45a049;
+        }
+        .input-group button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        .sidebar {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .info-panel {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .info-panel h3 {
+            margin: 0 0 15px 0;
+            color: #4CAF50;
+        }
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .metric:last-child {
+            border-bottom: none;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #4CAF50;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .membrane-status {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .membrane-item {
+            background: rgba(0,0,0,0.2);
+            padding: 8px;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧠 Deep Tree Echo - Cognitive Interface</h1>
+        <div class="session-info">
+            Session: <span id="sessionId">Initializing...</span>
+        </div>
+    </div>
+    
+    <div class="main-container">
+        <div class="chat-container">
+            <div class="chat-header">
+                <h3>Cognitive Conversation</h3>
+                <p>Interact with the Deep Tree Echo cognitive architecture. Your inputs will be processed through memory, reasoning, and grammar membranes.</p>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                <div class="message system-message">
+                    <strong>System:</strong> Initializing cognitive session...
+                </div>
+            </div>
+            
+            <div class="chat-input">
+                <div class="input-group">
+                    <input type="text" id="userInput" placeholder="Enter your message or question..." disabled>
+                    <button id="sendButton" onclick="sendMessage()" disabled>Send</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="sidebar">
+            <div class="info-panel">
+                <h3>Session Status</h3>
+                <div class="metric">
+                    <span>Status:</span>
+                    <span id="sessionStatus">Initializing</span>
+                </div>
+                <div class="metric">
+                    <span>Messages:</span>
+                    <span id="messageCount">0</span>
+                </div>
+                <div class="metric">
+                    <span>Avg Response Time:</span>
+                    <span id="avgResponseTime">0ms</span>
+                </div>
+                <div class="metric">
+                    <span>Memory Items:</span>
+                    <span id="memoryItems">0</span>
+                </div>
+            </div>
+            
+            <div class="info-panel">
+                <h3>Membrane Status</h3>
+                <div class="membrane-status">
+                    <div class="membrane-item">💭 Memory<br><span id="memoryStatus">Active</span></div>
+                    <div class="membrane-item">⚡ Reasoning<br><span id="reasoningStatus">Active</span></div>
+                    <div class="membrane-item">🎭 Grammar<br><span id="grammarStatus">Active</span></div>
+                    <div class="membrane-item">🤖 RWKV<br><span id="rwkvStatus">Mock</span></div>
+                </div>
+            </div>
+            
+            <div class="info-panel">
+                <h3>Quick Actions</h3>
+                <button class="input-group button" onclick="clearConversation()" style="width: 100%; margin-bottom: 10px;">Clear Conversation</button>
+                <button class="input-group button" onclick="exportConversation()" style="width: 100%; margin-bottom: 10px;">Export History</button>
+                <button class="input-group button" onclick="window.location.href='/'" style="width: 100%;">Back to Dashboard</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentSessionId = null;
+        let messageCount = 0;
+        let totalResponseTime = 0;
+        
+        // Initialize session
+        async function initializeSession() {
+            try {
+                const response = await fetch('/api/session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                currentSessionId = data.session_id;
+                
+                document.getElementById('sessionId').textContent = currentSessionId.substring(0, 8) + '...';
+                document.getElementById('sessionStatus').textContent = 'Active';
+                document.getElementById('userInput').disabled = false;
+                document.getElementById('sendButton').disabled = false;
+                
+                addSystemMessage('Cognitive session initialized. Ready for interaction.');
+                
+            } catch (error) {
+                addSystemMessage('Error initializing session: ' + error.message);
+            }
+        }
+        
+        // Send message
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const sendButton = document.getElementById('sendButton');
+            const message = input.value.trim();
+            
+            if (!message || !currentSessionId) return;
+            
+            // Disable input
+            input.disabled = true;
+            sendButton.disabled = true;
+            sendButton.innerHTML = '<span class="loading"></span>';
+            
+            // Add user message
+            addUserMessage(message);
+            input.value = '';
+            
+            try {
+                const startTime = Date.now();
+                
+                const response = await fetch('/api/process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        session_id: currentSessionId,
+                        input: message
+                    })
+                });
+                
+                const result = await response.json();
+                const responseTime = Date.now() - startTime;
+                
+                // Add echo response
+                addEchoMessage(result.response, responseTime, result.membrane_outputs);
+                
+                // Update metrics
+                messageCount++;
+                totalResponseTime += responseTime;
+                updateMetrics();
+                
+            } catch (error) {
+                addSystemMessage('Error processing message: ' + error.message);
+            } finally {
+                // Re-enable input
+                input.disabled = false;
+                sendButton.disabled = false;
+                sendButton.textContent = 'Send';
+                input.focus();
+            }
+        }
+        
+        // Add messages to chat
+        function addUserMessage(message) {
+            const messagesDiv = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message user-message';
+            messageDiv.innerHTML = `
+                <strong>You:</strong> ${message}
+                <div class="message-meta">${new Date().toLocaleTimeString()}</div>
+            `;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        function addEchoMessage(message, responseTime, membraneOutputs) {
+            const messagesDiv = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message echo-message';
+            
+            let membraneInfo = '';
+            if (membraneOutputs) {
+                membraneInfo = `
+                    <details style="margin-top: 10px;">
+                        <summary style="cursor: pointer; opacity: 0.8;">Membrane Details</summary>
+                        <div style="margin-top: 8px; font-size: 0.9em;">
+                            <div><strong>Memory:</strong> ${membraneOutputs.memory}</div>
+                            <div><strong>Reasoning:</strong> ${membraneOutputs.reasoning}</div>
+                            <div><strong>Grammar:</strong> ${membraneOutputs.grammar}</div>
+                        </div>
+                    </details>
+                `;
+            }
+            
+            messageDiv.innerHTML = `
+                <strong>Echo:</strong> ${message}
+                <div class="message-meta">
+                    ${new Date().toLocaleTimeString()} • ${responseTime}ms
+                </div>
+                ${membraneInfo}
+            `;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        function addSystemMessage(message) {
+            const messagesDiv = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message system-message';
+            messageDiv.innerHTML = `
+                <strong>System:</strong> ${message}
+                <div class="message-meta">${new Date().toLocaleTimeString()}</div>
+            `;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        // Update metrics
+        function updateMetrics() {
+            document.getElementById('messageCount').textContent = messageCount;
+            const avgTime = messageCount > 0 ? Math.round(totalResponseTime / messageCount) : 0;
+            document.getElementById('avgResponseTime').textContent = avgTime + 'ms';
+        }
+        
+        // Clear conversation
+        function clearConversation() {
+            if (confirm('Clear conversation history?')) {
+                document.getElementById('chatMessages').innerHTML = '';
+                addSystemMessage('Conversation cleared.');
+                messageCount = 0;
+                totalResponseTime = 0;
+                updateMetrics();
+            }
+        }
+        
+        // Export conversation
+        function exportConversation() {
+            const messages = document.getElementById('chatMessages').innerText;
+            const blob = new Blob([messages], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `echo_conversation_${new Date().toISOString().split('T')[0]}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        // Handle Enter key
+        document.getElementById('userInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        // Initialize on load
+        window.onload = function() {
+            initializeSession();
+        };
+    </script>
+</body>
+</html>
+'''
+
+# Write templates
+with open(os.path.join(template_dir, 'dashboard.html'), 'w') as f:
+    f.write(dashboard_template)
+
+with open(os.path.join(template_dir, 'cognitive.html'), 'w') as f:
+    f.write(cognitive_template)
+
+if __name__ == '__main__':
+    # Configure for deployment
+    host = '0.0.0.0'
+    port = int(os.environ.get('PORT', 8000))
+    debug = os.environ.get('FLASK_DEBUG', 'false').lower() == 'true'
+    
+    logger.info(f"Starting Deep Tree Echo Integrated Application")
+    logger.info(f"WebVM Mode: {CONFIG['webvm_mode']}")
+    logger.info(f"Memory Limit: {CONFIG['memory_limit_mb']}MB")
+    logger.info(f"Server: {host}:{port}")
+    
+    app.run(host=host, port=port, debug=debug, threaded=True)
+

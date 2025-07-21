@@ -1,0 +1,241 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Tree Echo - Cognitive Architecture</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .header h1 {
+            font-size: 3.5em;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .header p {
+            font-size: 1.3em;
+            margin: 10px 0;
+            opacity: 0.9;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: rgba(255,255,255,0.1);
+            padding: 25px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        .card h3 {
+            margin: 0 0 20px 0;
+            color: #4CAF50;
+            font-size: 1.4em;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+            animation: pulse 2s infinite;
+        }
+        .status-online { background: #4CAF50; }
+        .status-warning { background: #ff9800; }
+        .status-offline { background: #f44336; }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .metric:last-child {
+            border-bottom: none;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: background 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        .btn:hover {
+            background: #45a049;
+        }
+        .btn-secondary {
+            background: #2196F3;
+        }
+        .btn-secondary:hover {
+            background: #1976D2;
+        }
+        .architecture-diagram {
+            text-align: center;
+            font-family: monospace;
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .membrane {
+            margin: 5px 0;
+            padding: 5px;
+        }
+        .membrane-root { color: #ff6b6b; }
+        .membrane-cognitive { color: #4ecdc4; }
+        .membrane-extension { color: #45b7d1; }
+        .membrane-security { color: #f9ca24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧠 Deep Tree Echo</h1>
+            <p>Membrane-Based Cognitive Architecture with RWKV Integration</p>
+            <p>WebVM Deployment Ready</p>
+        </div>
+        
+        <div class="grid">
+            <div class="card">
+                <h3><span class="status-indicator status-online"></span>System Status</h3>
+                <div class="metric">
+                    <span>Deployment Mode:</span>
+                    <span>{{ 'WebVM' if config.webvm_mode else 'Standard' }}</span>
+                </div>
+                <div class="metric">
+                    <span>Memory Limit:</span>
+                    <span>{{ config.memory_limit_mb }}MB</span>
+                </div>
+                <div class="metric">
+                    <span>Max Sessions:</span>
+                    <span>{{ config.max_sessions }}</span>
+                </div>
+                <div class="metric">
+                    <span>Persistence:</span>
+                    <span>{{ 'Enabled' if config.enable_persistence else 'Disabled' }}</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>📊 Performance Metrics</h3>
+                <div class="metric">
+                    <span>Total Sessions:</span>
+                    <span>{{ metrics.total_sessions }}</span>
+                </div>
+                <div class="metric">
+                    <span>Active Sessions:</span>
+                    <span>{{ metrics.active_sessions }}</span>
+                </div>
+                <div class="metric">
+                    <span>Total Requests:</span>
+                    <span>{{ metrics.total_requests }}</span>
+                </div>
+                <div class="metric">
+                    <span>Uptime:</span>
+                    <span id="uptime">Calculating...</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>🚀 Quick Actions</h3>
+                <p>Start interacting with the cognitive architecture:</p>
+                <a href="/cognitive" class="btn">Launch Cognitive Interface</a>
+                <br><br>
+                <a href="/api/status" class="btn btn-secondary">View API Status</a>
+                <br><br>
+                <a href="/api/metrics" class="btn btn-secondary">Detailed Metrics</a>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3>🏗️ Membrane Architecture</h3>
+            <div class="architecture-diagram">
+                <div class="membrane membrane-root">🎪 Root Membrane (System Boundary)</div>
+                <div class="membrane membrane-cognitive">├── 🧠 Cognitive Membrane (Core Processing)</div>
+                <div class="membrane">│   ├── 💭 Memory Membrane (Storage & Retrieval)</div>
+                <div class="membrane">│   ├── ⚡ Reasoning Membrane (Inference & Logic)</div>
+                <div class="membrane">│   └── 🎭 Grammar Membrane (Symbolic Processing)</div>
+                <div class="membrane membrane-extension">├── 🔌 Extension Membrane (Plugin Container)</div>
+                <div class="membrane">│   ├── 🌍 Browser Membrane</div>
+                <div class="membrane">│   ├── 📊 ML Membrane (RWKV Integration)</div>
+                <div class="membrane">│   └── 🪞 Introspection Membrane</div>
+                <div class="membrane membrane-security">└── 🛡️ Security Membrane (Validation & Control)</div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3>🤖 RWKV Integration Features</h3>
+            <div class="metric">
+                <span>Model Architecture:</span>
+                <span>RWKV-7 (Hybrid RNN-Transformer)</span>
+            </div>
+            <div class="metric">
+                <span>Memory Complexity:</span>
+                <span>Linear (O(1) inference)</span>
+            </div>
+            <div class="metric">
+                <span>Context Length:</span>
+                <span>Theoretically Infinite</span>
+            </div>
+            <div class="metric">
+                <span>WebVM Optimized:</span>
+                <span>Yes (600MB memory limit)</span>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Update uptime
+        function updateUptime() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    const uptimeSeconds = data.uptime_seconds;
+                    const hours = Math.floor(uptimeSeconds / 3600);
+                    const minutes = Math.floor((uptimeSeconds % 3600) / 60);
+                    const seconds = Math.floor(uptimeSeconds % 60);
+                    document.getElementById('uptime').textContent = 
+                        `${hours}h ${minutes}m ${seconds}s`;
+                })
+                .catch(error => {
+                    document.getElementById('uptime').textContent = 'Error';
+                });
+        }
+        
+        // Update every 5 seconds
+        setInterval(updateUptime, 5000);
+        updateUptime();
+    </script>
+</body>
+</html>
