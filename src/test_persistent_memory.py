@@ -308,7 +308,7 @@ def test_memory_encoder():
     
     # Same text should produce identical encodings
     similarity = encoder.similarity(encoding1, encoding2)
-    assert similarity == 1.0
+    assert abs(similarity - 1.0) < 1e-5  # Allow for floating point precision
     
     # Different texts should have different encodings
     different_text = "Completely different content"

@@ -399,11 +399,13 @@ class PersistentMemorySystem:
             return None
     
     def retrieve_memory(self, memory_id: str) -> Optional[MemoryItem]:
-        """Retrieve a specific memory by ID"""
+        """Retrieve a specific memory by ID and update access count"""
         memory = self.database.retrieve_memory(memory_id)
         if memory:
             self.database.update_access(memory_id)
             self.stats['memories_retrieved'] += 1
+            # Retrieve updated memory with incremented access count
+            memory = self.database.retrieve_memory(memory_id)
         return memory
     
     def search_memories(self, query_text: str, memory_types: List[str] = None,
