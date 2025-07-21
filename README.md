@@ -102,11 +102,26 @@ docker run -p 8000:8000 deep-tree-echo
 The application is optimized for WebVM deployment with memory constraints:
 
 ```bash
-# Use the provided WebVM configuration
-cp config/echo_webvm_config.js webvm_config.js
-# Deploy using WebVM deployment script
-./scripts/deploy_webvm.sh
+# Navigate to WebVM directory
+cd webvm
+
+# Deploy to WebVM
+chmod +x deploy_echo_webvm.sh
+./deploy_echo_webvm.sh
+
+# Start WebVM with Deep Tree Echo
+chmod +x start_webvm_echo.sh
+./start_webvm_echo.sh
 ```
+
+**WebVM Features:**
+- ✅ **Browser-based**: Runs directly in any modern browser
+- ✅ **Zero Installation**: No local setup required
+- ✅ **600MB Optimized**: Memory-efficient for WebVM constraints
+- ✅ **Universal Access**: Works on any device with a browser
+- ✅ **Sandboxed**: Secure isolated execution environment
+
+See [webvm/README.md](webvm/README.md) for detailed WebVM deployment guide.
 
 ## 📖 Documentation
 
@@ -131,6 +146,11 @@ deep-tree-echo-webvm-rwkv/
 │   ├── echo_rwkv_bridge.py # RWKV integration bridge
 │   ├── templates/         # HTML templates
 │   └── static/           # CSS, JS, assets
+├── webvm/                 # WebVM deployment configuration
+│   ├── config/           # WebVM-specific configuration
+│   ├── assets/           # WebVM assets and documentation
+│   ├── src/              # WebVM source components
+│   └── deploy_echo_webvm.sh # WebVM deployment script
 ├── docs/                  # Documentation
 ├── config/               # Configuration files
 ├── tests/               # Test suites
@@ -224,7 +244,7 @@ We welcome contributions to the Deep Tree Echo WebVM-RWKV integration! Please se
 
 ## 📄 License
 
-This project is licensed under the AGPL License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
