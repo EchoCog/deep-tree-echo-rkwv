@@ -13,6 +13,7 @@ import threading
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 import uuid
+from persistent_memory import PersistentMemorySystem, MemoryQuery
 
 # Configure logging
 logging.basicConfig(
@@ -35,6 +36,9 @@ system_metrics = {
     'last_activity': None
 }
 
+# Initialize persistent memory system
+persistent_memory = None
+
 # Configuration
 CONFIG = {
     'webvm_mode': os.environ.get('ECHO_WEBVM_MODE', 'true').lower() == 'true',
@@ -45,8 +49,15 @@ CONFIG = {
     'data_dir': '/tmp/echo_data'
 }
 
-# Ensure data directory exists
+# Ensure data directory exists and initialize persistent memory
 os.makedirs(CONFIG['data_dir'], exist_ok=True)
+if CONFIG['enable_persistence']:
+    try:
+        persistent_memory = PersistentMemorySystem(CONFIG['data_dir'])
+        logger.info("Persistent memory system initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize persistent memory: {e}")
+        CONFIG['enable_persistence'] = False
 
 class MockCognitiveSession:
     """Mock cognitive session for demonstration without full RWKV"""
@@ -115,16 +126,52 @@ class MockCognitiveSession:
         return conversation_entry
     
     def _process_memory_membrane(self, input_text: str) -> str:
-        """Mock memory membrane processing"""
-        # Simple keyword-based memory retrieval
+        """Mock memory membrane processing with persistent storage"""
         keywords = input_text.lower().split()
         
+        # Store significant memories
+        if self._is_memory_significant(input_text):
+            memory_type = self._classify_memory_type(input_text)
+            if persistent_memory:
+                try:
+                    memory_id = persistent_memory.store_memory(
+                        content=input_text,
+                        memory_type=memory_type,
+                        session_id=self.session_id,
+                        metadata={'processing_type': 'memory_membrane'}
+                    )
+                    if memory_id:
+                        logger.debug(f"Stored memory {memory_id} for session {self.session_id}")
+                except Exception as e:
+                    logger.error(f"Error storing memory: {e}")
+        
+        # Retrieve relevant memories
+        relevant_memories = []
+        if persistent_memory:
+            try:
+                search_results = persistent_memory.search_memories(
+                    query_text=input_text,
+                    session_id=self.session_id,
+                    max_results=3
+                )
+                relevant_memories = [result.item for result in search_results]
+            except Exception as e:
+                logger.error(f"Error retrieving memories: {e}")
+        
         if any(word in keywords for word in ['remember', 'recall', 'memory']):
-            return f"Accessing memory systems for: {input_text}. Found {len(self.memory_state['episodic'])} related experiences."
+            if relevant_memories:
+                memory_summary = f"Found {len(relevant_memories)} related memories: " + \
+                               "; ".join([mem.content[:50] + "..." for mem in relevant_memories[:2]])
+                return f"Accessing memory systems for: {input_text}. {memory_summary}"
+            else:
+                return f"Accessing memory systems for: {input_text}. Found {len(self.memory_state['episodic'])} local experiences."
         elif any(word in keywords for word in ['learn', 'store', 'save']):
-            return f"Storing new information in declarative memory: {input_text}"
+            return f"Storing new information in persistent memory: {input_text}"
         else:
-            return f"Memory membrane activated. Processing: {input_text}"
+            memory_context = ""
+            if relevant_memories:
+                memory_context = f" Drawing from {len(relevant_memories)} related memories."
+            return f"Memory membrane activated.{memory_context} Processing: {input_text}"
     
     def _process_reasoning_membrane(self, input_text: str) -> str:
         """Mock reasoning membrane processing"""
@@ -149,8 +196,46 @@ class MockCognitiveSession:
         return f"Grammar analysis: {word_count} words, {sentence_count} sentences, {complexity} complexity. Symbolic patterns detected."
     
     def _integrate_responses(self, memory: str, reasoning: str, grammar: str) -> str:
-        """Integrate membrane responses into coherent output"""
-        return f"Integrated cognitive response: Drawing from memory ({len(self.memory_state['episodic'])} experiences), applying reasoning patterns, and considering linguistic structure. {memory[:50]}..."
+        """Integrate membrane responses into coherent output with memory context"""
+        # Get memory statistics if persistent memory is available
+        memory_context = ""
+        if persistent_memory:
+            try:
+                stats = persistent_memory.get_system_stats()
+                total_memories = stats.get('database_stats', {}).get('total_memories', 0)
+                if total_memories > 0:
+                    memory_context = f" [Drawing from {total_memories} persistent memories]"
+            except Exception as e:
+                logger.error(f"Error getting memory stats: {e}")
+        
+        return f"Integrated cognitive response{memory_context}: Drawing from memory ({len(self.memory_state['episodic'])} experiences), applying reasoning patterns, and considering linguistic structure. {memory[:50]}..."
+    
+    def _is_memory_significant(self, text: str) -> bool:
+        """Determine if input should be stored in persistent memory"""
+        # Store memories that are questions, statements with significant content, or learning-related
+        words = text.split()
+        return (
+            len(words) >= 3 and  # Minimum length
+            (len(words) >= 8 or  # Long enough to be significant
+             '?' in text or      # Questions are significant
+             any(word in text.lower() for word in [
+                 'remember', 'learn', 'important', 'fact', 'know', 'understand',
+                 'think', 'believe', 'feel', 'experience', 'happened'
+             ]))
+        )
+    
+    def _classify_memory_type(self, text: str) -> str:
+        """Classify memory type based on content"""
+        text_lower = text.lower()
+        
+        if any(word in text_lower for word in ['how to', 'step', 'process', 'method', 'way to']):
+            return 'procedural'
+        elif any(word in text_lower for word in ['i', 'me', 'my', 'happened', 'experience', 'felt', 'did']):
+            return 'episodic'  
+        elif any(word in text_lower for word in ['is', 'are', 'fact', 'definition', 'means', 'because']):
+            return 'declarative'
+        else:
+            return 'semantic'
     
     def get_state_summary(self) -> Dict[str, Any]:
         """Get summary of cognitive state"""
@@ -311,9 +396,18 @@ def detailed_metrics():
     for session_id, session in cognitive_sessions.items():
         session_summaries.append(session.get_state_summary())
     
+    # Add persistent memory statistics
+    memory_stats = {}
+    if persistent_memory:
+        try:
+            memory_stats = persistent_memory.get_system_stats()
+        except Exception as e:
+            logger.error(f"Error getting persistent memory stats: {e}")
+    
     return jsonify({
         'system_metrics': system_metrics,
         'session_summaries': session_summaries,
+        'persistent_memory': memory_stats,
         'resource_usage': {
             'memory_limit_mb': CONFIG['memory_limit_mb'],
             'estimated_usage_mb': len(cognitive_sessions) * 10,
@@ -321,6 +415,88 @@ def detailed_metrics():
             'max_sessions': CONFIG['max_sessions']
         }
     })
+
+@app.route('/api/memory/search', methods=['POST'])
+def search_memories():
+    """Search persistent memories"""
+    if not persistent_memory:
+        return jsonify({'error': 'Persistent memory not available'}), 503
+    
+    try:
+        data = request.get_json()
+        if not data or 'query' not in data:
+            return jsonify({'error': 'No query provided'}), 400
+        
+        query_text = data['query']
+        session_id = data.get('session_id')
+        memory_types = data.get('memory_types')
+        max_results = data.get('max_results', 10)
+        
+        search_results = persistent_memory.search_memories(
+            query_text=query_text,
+            memory_types=memory_types,
+            session_id=session_id,
+            max_results=max_results
+        )
+        
+        # Convert to JSON-serializable format
+        results = []
+        for result in search_results:
+            results.append({
+                'id': result.item.id,
+                'content': result.item.content,
+                'memory_type': result.item.memory_type,
+                'importance': float(result.item.importance),
+                'timestamp': result.item.timestamp,
+                'session_id': result.item.session_id,
+                'relevance_score': float(result.relevance_score),
+                'similarity_score': float(result.similarity_score),
+                'access_count': result.item.access_count
+            })
+        
+        return jsonify({
+            'query': query_text,
+            'results': results,
+            'total_found': len(results)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error searching memories: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/memory/consolidate', methods=['POST'])
+def consolidate_memories():
+    """Consolidate similar memories to reduce redundancy"""
+    if not persistent_memory:
+        return jsonify({'error': 'Persistent memory not available'}), 503
+    
+    try:
+        data = request.get_json() or {}
+        session_id = data.get('session_id')
+        
+        consolidated_count = persistent_memory.consolidate_memories(session_id)
+        
+        return jsonify({
+            'consolidated_count': consolidated_count,
+            'status': 'success'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error consolidating memories: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/memory/stats')
+def memory_statistics():
+    """Get persistent memory statistics"""
+    if not persistent_memory:
+        return jsonify({'error': 'Persistent memory not available'}), 503
+    
+    try:
+        stats = persistent_memory.get_system_stats()
+        return jsonify(stats)
+    except Exception as e:
+        logger.error(f"Error getting memory statistics: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/health')
 def health_check():

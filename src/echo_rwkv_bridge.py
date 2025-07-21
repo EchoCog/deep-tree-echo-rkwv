@@ -15,6 +15,7 @@ import numpy as np
 from datetime import datetime
 import threading
 import queue
+from persistent_memory import PersistentMemorySystem
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -184,10 +185,11 @@ class RealRWKVInterface(RWKVModelInterface):
         }
 
 class EchoMembraneProcessor:
-    """Enhanced membrane processor with RWKV integration"""
+    """Enhanced membrane processor with RWKV integration and persistent memory"""
     
-    def __init__(self, rwkv_interface: RWKVModelInterface):
+    def __init__(self, rwkv_interface: RWKVModelInterface, persistent_memory: PersistentMemorySystem = None):
         self.rwkv = rwkv_interface
+        self.persistent_memory = persistent_memory
         self.processing_stats = {
             'total_processed': 0,
             'avg_processing_time': 0.0,
@@ -195,20 +197,58 @@ class EchoMembraneProcessor:
         }
     
     async def process_memory_membrane(self, context: CognitiveContext) -> MembraneResponse:
-        """Process input through memory membrane with RWKV"""
+        """Process input through memory membrane with RWKV and persistent storage"""
         start_time = time.time()
         
         try:
-            # Retrieve relevant memories
-            relevant_memories = await self.rwkv.retrieve_memories(context.user_input)
+            # Store significant memories in persistent storage
+            if self.persistent_memory and self._is_significant_memory(context.user_input):
+                memory_type = self._classify_memory_type(context.user_input)
+                try:
+                    memory_id = self.persistent_memory.store_memory(
+                        content=context.user_input,
+                        memory_type=memory_type,
+                        session_id=context.session_id,
+                        metadata={
+                            'processing_type': 'memory_membrane',
+                            'goals': context.processing_goals
+                        }
+                    )
+                    logger.debug(f"Stored persistent memory {memory_id}")
+                except Exception as e:
+                    logger.error(f"Error storing persistent memory: {e}")
+            
+            # Retrieve relevant memories from persistent storage and RWKV
+            relevant_memories = []
+            if self.persistent_memory:
+                try:
+                    search_results = self.persistent_memory.search_memories(
+                        query_text=context.user_input,
+                        session_id=context.session_id,
+                        max_results=5
+                    )
+                    relevant_memories.extend([result.item for result in search_results])
+                except Exception as e:
+                    logger.error(f"Error retrieving persistent memories: {e}")
+            
+            # Also get RWKV-based memory retrieval
+            try:
+                rwkv_memories = await self.rwkv.retrieve_memories(context.user_input)
+                relevant_memories.extend(rwkv_memories)
+            except Exception as e:
+                logger.error(f"Error retrieving RWKV memories: {e}")
             
             # Construct memory-enhanced prompt
             memory_context = ""
             if relevant_memories:
-                memory_context = "Relevant memories:\n" + "\n".join([
-                    f"- {mem.get('content', '')}" for mem in relevant_memories
-                ])
-            
+                memory_items = []
+                for mem in relevant_memories[:3]:  # Use top 3 memories
+                    if hasattr(mem, 'content'):
+                        memory_items.append(f"- {mem.content[:100]}")
+                    else:
+                        memory_items.append(f"- {str(mem)[:100]}")
+                memory_context = "Relevant memories:\n" + "\n".join(memory_items)
+
             prompt = f"""
 Memory Processing Task:
 Input: {context.user_input}
@@ -216,7 +256,7 @@ Input: {context.user_input}
 
 Process this input through the memory membrane, considering:
 1. Declarative knowledge (facts, concepts)
-2. Procedural knowledge (skills, methods)
+2. Procedural knowledge (skills, methods) 
 3. Episodic memories (experiences, events)
 4. Relevant associations and patterns
 
@@ -226,14 +266,17 @@ Memory Response:"""
             response = await self.rwkv.generate_response(prompt, context)
             
             # Store new memory if significant
-            if self._is_significant_memory(context.user_input):
-                memory_item = {
-                    'content': context.user_input,
-                    'response': response,
-                    'timestamp': datetime.now().isoformat(),
-                    'context': context.session_id
-                }
-                await self.rwkv.encode_memory(memory_item)
+            if self.persistent_memory and self._is_significant_memory(context.user_input):
+                try:
+                    memory_item = {
+                        'content': f"Q: {context.user_input} A: {response}",
+                        'response': response,
+                        'timestamp': datetime.now().isoformat(),
+                        'context': context.session_id
+                    }
+                    await self.rwkv.encode_memory(memory_item)
+                except Exception as e:
+                    logger.error(f"Error encoding memory with RWKV: {e}")
             
             processing_time = time.time() - start_time
             
@@ -245,9 +288,10 @@ Memory Response:"""
                 processing_time=processing_time,
                 internal_state={
                     'memories_retrieved': len(relevant_memories),
+                    'persistent_memories': len([m for m in relevant_memories if hasattr(m, 'id')]),
                     'new_memory_stored': self._is_significant_memory(context.user_input)
                 },
-                metadata={'rwkv_enhanced': True}
+                metadata={'rwkv_enhanced': True, 'persistent_memory_enabled': self.persistent_memory is not None}
             )
             
         except Exception as e:
@@ -347,6 +391,19 @@ Grammar Response:"""
             any(word in text.lower() for word in ['learn', 'remember', 'important', 'fact', 'know'])
         )
     
+    def _classify_memory_type(self, text: str) -> str:
+        """Classify the type of memory based on content"""
+        text_lower = text.lower()
+        
+        if any(word in text_lower for word in ['how to', 'step', 'process', 'method', 'way to']):
+            return 'procedural'
+        elif any(word in text_lower for word in ['i', 'me', 'my', 'happened', 'experience', 'felt']):
+            return 'episodic'
+        elif any(word in text_lower for word in ['is', 'are', 'fact', 'definition', 'means']):
+            return 'declarative'
+        else:
+            return 'semantic'
+    
     def _classify_reasoning_type(self, text: str) -> str:
         """Classify the type of reasoning needed"""
         text_lower = text.lower()
@@ -396,10 +453,11 @@ Grammar Response:"""
         )
 
 class EchoRWKVIntegrationEngine:
-    """Main integration engine for Echo-RWKV system"""
+    """Main integration engine for Echo-RWKV system with persistent memory"""
     
-    def __init__(self, use_real_rwkv: bool = False):
+    def __init__(self, use_real_rwkv: bool = False, persistent_memory: PersistentMemorySystem = None):
         self.use_real_rwkv = use_real_rwkv
+        self.persistent_memory = persistent_memory
         self.rwkv_interface = None
         self.membrane_processor = None
         self.initialized = False
@@ -426,8 +484,8 @@ class EchoRWKVIntegrationEngine:
                 logger.error("Failed to initialize RWKV interface")
                 return False
             
-            # Initialize membrane processor
-            self.membrane_processor = EchoMembraneProcessor(self.rwkv_interface)
+            # Initialize membrane processor with persistent memory
+            self.membrane_processor = EchoMembraneProcessor(self.rwkv_interface, self.persistent_memory)
             
             self.initialized = True
             logger.info("Echo-RWKV integration engine initialized successfully")
