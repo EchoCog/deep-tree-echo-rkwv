@@ -8,14 +8,19 @@ import numpy as np
 import json
 import os
 import time
+import logging
 from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 
-# RWKV imports (will be available when deployed)
+# Configure logging
+logger = logging.getLogger(__name__)
+
+# RWKV imports
 try:
     from rwkv.model import RWKV
     from rwkv.utils import PIPELINE
+    from rwkv_model_manager import RWKVModelManager
     RWKV_AVAILABLE = True
 except ImportError:
     RWKV_AVAILABLE = False
@@ -72,17 +77,95 @@ class RWKVMemoryMembrane(MembraneInterface):
         else:
             self._initialize_mock()
     
+    def _generate_response(self, prompt: str, max_tokens: int = 100, temperature: float = None) -> str:
+        """Optimized RWKV text generation for WebVM constraints"""
+        if not self.pipeline:
+            return f"Mock response for: {prompt[:50]}..."
+        
+        try:
+            # Use provided temperature or default from config
+            temp = temperature or self.config.temperature
+            
+            # Encode prompt
+            tokens = self.pipeline.encode(prompt)
+            
+            # Generate response with memory optimization
+            state = None
+            generated_tokens = []
+            
+            # Forward pass through prompt
+            for token in tokens:
+                out, state = self.rwkv_model.forward([token], state)
+            
+            # Generate new tokens
+            for _ in range(max_tokens):
+                # Sample from logits
+                token = self.pipeline.sample_logits(
+                    out,
+                    temperature=temp,
+                    top_p=self.config.top_p,
+                    top_k=self.config.top_k
+                )[0]
+                
+                generated_tokens.append(token)
+                
+                # Check for end token or newline
+                if token == 0 or (len(generated_tokens) > 10 and token in [198, 628]):  # newline tokens
+                    break
+                
+                # Forward pass for next token
+                out, state = self.rwkv_model.forward([token], state)
+            
+            # Decode generated tokens
+            response = self.pipeline.decode(generated_tokens)
+            
+            # Clean up response
+            response = response.strip()
+            if not response:
+                response = f"Processed: {prompt[:30]}..."
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f"Error in RWKV generation: {e}")
+            return f"Processing error for: {prompt[:30]}..."
+        
+        if RWKV_AVAILABLE:
+            self._initialize_rwkv()
+        else:
+            self._initialize_mock()
+    
     def _initialize_rwkv(self):
         """Initialize RWKV model for memory operations"""
         try:
+            # Use model manager to get appropriate model
+            model_manager = RWKVModelManager(memory_limit_mb=600)
+            model_info = model_manager.prepare_model_for_webvm()
+            
+            if not model_info:
+                logger.warning("No suitable RWKV model available, falling back to mock")
+                self._initialize_mock()
+                return
+            
+            # Initialize RWKV model
             self.rwkv_model = RWKV(
-                model=self.config.model_path,
-                strategy='cpu fp32'  # Optimized for WebVM
+                model=model_info['model_path'],
+                strategy='cpu fp32',  # Optimized for WebVM
+                verbose=False
             )
+            
+            # Initialize pipeline with tokenizer
             self.pipeline = PIPELINE(self.rwkv_model, "rwkv_vocab_v20230424")
-            print(f"RWKV Memory Membrane initialized with {self.config.model_size} model")
+            
+            # Store model info for reference
+            self.model_info = model_info
+            
+            logger.info(f"RWKV Memory Membrane initialized with {model_info['model_config'].name}")
+            print(f"Memory Membrane: Using real RWKV model {model_info['model_config'].name}")
+            
         except Exception as e:
-            print(f"Failed to initialize RWKV: {e}")
+            logger.error(f"Failed to initialize RWKV: {e}")
+            print(f"Memory Membrane initialization error: {e}")
             self._initialize_mock()
     
     def _initialize_mock(self):
@@ -94,37 +177,26 @@ class RWKVMemoryMembrane(MembraneInterface):
     def process_input(self, input_data: str, context: EchoMemoryState) -> Dict[str, Any]:
         """Process input through memory membrane using RWKV"""
         if self.pipeline:
-            # Use RWKV for memory encoding and retrieval
-            memory_query = f"Memory retrieval for: {input_data}"
-            
-            # Generate memory associations using RWKV
-            ctx = memory_query
-            all_tokens = []
-            out_last = 0
-            
-            for i in range(100):  # Generate up to 100 tokens
-                out, state = self.rwkv_model.forward(self.pipeline.encode(ctx), None)
-                for n in self.pipeline.sample_logits(
-                    out, 
-                    temperature=self.config.temperature,
-                    top_p=self.config.top_p,
-                    top_k=self.config.top_k
-                ):
-                    all_tokens += [n]
-                    if n in [0]:  # End token
-                        break
-                    ctx = self.pipeline.decode(all_tokens[out_last:])
-                    out_last = len(all_tokens)
-                    break
-            
-            memory_response = self.pipeline.decode(all_tokens)
+            # Create memory-focused prompt
+            memory_prompt = f"""Memory Analysis: {input_data}
+
+Task: Analyze this input for memory-related processing including:
+1. Factual knowledge extraction
+2. Procedural knowledge identification  
+3. Episodic memory associations
+4. Relevant memory retrieval
+
+Response:"""
+
+            # Generate memory response using optimized method
+            memory_response = self._generate_response(memory_prompt, max_tokens=80, temperature=0.7)
             
             # Update memory state
             memory_entry = {
                 'input': input_data,
                 'response': memory_response,
                 'timestamp': time.time(),
-                'context_length': len(all_tokens)
+                'processing_type': 'rwkv_enhanced'
             }
             
             # Store in appropriate memory type
@@ -142,7 +214,7 @@ class RWKVMemoryMembrane(MembraneInterface):
                 'input': input_data,
                 'response': f"Mock memory response for: {input_data}",
                 'timestamp': time.time(),
-                'context_length': len(input_data.split())
+                'processing_type': 'mock'
             }
     
     def _is_factual(self, input_data: str) -> bool:
@@ -177,15 +249,88 @@ class RWKVReasoningMembrane(MembraneInterface):
     def _initialize_rwkv(self):
         """Initialize RWKV model for reasoning operations"""
         try:
+            # Use model manager to get appropriate model
+            model_manager = RWKVModelManager(memory_limit_mb=600)
+            model_info = model_manager.prepare_model_for_webvm()
+            
+            if not model_info:
+                logger.warning("No suitable RWKV model available, falling back to mock")
+                self._initialize_mock()
+                return
+            
+            # Initialize RWKV model
             self.rwkv_model = RWKV(
-                model=self.config.model_path,
-                strategy='cpu fp32'
+                model=model_info['model_path'],
+                strategy='cpu fp32',
+                verbose=False
             )
+            
+            # Initialize pipeline with tokenizer
             self.pipeline = PIPELINE(self.rwkv_model, "rwkv_vocab_v20230424")
-            print(f"RWKV Reasoning Membrane initialized")
+            
+            # Store model info for reference
+            self.model_info = model_info
+            
+            logger.info(f"RWKV Reasoning Membrane initialized with {model_info['model_config'].name}")
+            print(f"Reasoning Membrane: Using real RWKV model {model_info['model_config'].name}")
+            
         except Exception as e:
-            print(f"Failed to initialize RWKV: {e}")
+            logger.error(f"Failed to initialize RWKV: {e}")
+            print(f"Reasoning Membrane initialization error: {e}")
             self._initialize_mock()
+    
+    def _generate_response(self, prompt: str, max_tokens: int = 120, temperature: float = None) -> str:
+        """Optimized RWKV text generation for reasoning tasks"""
+        if not self.pipeline:
+            return f"Mock reasoning for: {prompt[:50]}..."
+        
+        try:
+            # Use lower temperature for more focused reasoning
+            temp = temperature or (self.config.temperature * 0.8)
+            
+            # Encode prompt
+            tokens = self.pipeline.encode(prompt)
+            
+            # Generate response with memory optimization
+            state = None
+            generated_tokens = []
+            
+            # Forward pass through prompt
+            for token in tokens:
+                out, state = self.rwkv_model.forward([token], state)
+            
+            # Generate new tokens
+            for _ in range(max_tokens):
+                # Sample from logits
+                token = self.pipeline.sample_logits(
+                    out,
+                    temperature=temp,
+                    top_p=self.config.top_p,
+                    top_k=self.config.top_k
+                )[0]
+                
+                generated_tokens.append(token)
+                
+                # Check for end token or reasoning completion
+                if token == 0 or (len(generated_tokens) > 15 and token in [198, 628]):  # newline tokens
+                    break
+                
+                # Forward pass for next token
+                out, state = self.rwkv_model.forward([token], state)
+            
+            # Decode generated tokens
+            response = self.pipeline.decode(generated_tokens)
+            
+            # Clean up response
+            response = response.strip()
+            if not response:
+                response = f"Reasoning applied to: {prompt[:30]}..."
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f"Error in RWKV reasoning generation: {e}")
+            return f"Reasoning error for: {prompt[:30]}..."
     
     def _initialize_mock(self):
         """Mock implementation for testing"""
@@ -196,40 +341,33 @@ class RWKVReasoningMembrane(MembraneInterface):
     def process_input(self, input_data: str, context: EchoMemoryState) -> Dict[str, Any]:
         """Process input through reasoning membrane using RWKV"""
         if self.pipeline:
-            # Construct reasoning prompt
-            reasoning_prompt = self._construct_reasoning_prompt(input_data, context)
-            
-            # Generate reasoning using RWKV
-            ctx = reasoning_prompt
-            all_tokens = []
-            out_last = 0
-            
-            for i in range(200):  # Generate up to 200 tokens for reasoning
-                out, state = self.rwkv_model.forward(self.pipeline.encode(ctx), None)
-                for n in self.pipeline.sample_logits(
-                    out,
-                    temperature=self.config.temperature * 0.7,  # Lower temperature for reasoning
-                    top_p=self.config.top_p,
-                    top_k=self.config.top_k
-                ):
-                    all_tokens += [n]
-                    if n in [0]:  # End token
-                        break
-                    ctx = self.pipeline.decode(all_tokens[out_last:])
-                    out_last = len(all_tokens)
-                    break
-            
-            reasoning_response = self.pipeline.decode(all_tokens)
-            
-            # Analyze reasoning type
+            # Analyze reasoning type needed
             reasoning_type = self._classify_reasoning(input_data)
+            
+            # Create reasoning-focused prompt
+            reasoning_prompt = f"""Reasoning Analysis: {input_data}
+
+Type: {reasoning_type} reasoning
+Context: Recent memories: {len(context.episodic)} items
+
+Task: Apply {reasoning_type} reasoning to analyze this input step by step:
+1. Break down the problem/question
+2. Apply logical patterns and inference
+3. Consider evidence and constraints
+4. Draw reasoned conclusions
+
+Analysis:"""
+
+            # Generate reasoning response using optimized method
+            reasoning_response = self._generate_response(reasoning_prompt, max_tokens=100, temperature=0.6)
             
             reasoning_result = {
                 'input': input_data,
                 'reasoning_type': reasoning_type,
                 'response': reasoning_response,
                 'confidence': self._calculate_confidence(reasoning_response),
-                'timestamp': time.time()
+                'timestamp': time.time(),
+                'processing_type': 'rwkv_enhanced'
             }
             
             return reasoning_result
@@ -240,7 +378,8 @@ class RWKVReasoningMembrane(MembraneInterface):
                 'reasoning_type': 'deductive',
                 'response': f"Mock reasoning response for: {input_data}",
                 'confidence': 0.8,
-                'timestamp': time.time()
+                'timestamp': time.time(),
+                'processing_type': 'mock'
             }
     
     def _construct_reasoning_prompt(self, input_data: str, context: EchoMemoryState) -> str:
@@ -309,14 +448,34 @@ class RWKVGrammarMembrane(MembraneInterface):
     def _initialize_rwkv(self):
         """Initialize RWKV model for grammar operations"""
         try:
+            # Use model manager to get appropriate model
+            model_manager = RWKVModelManager(memory_limit_mb=600)
+            model_info = model_manager.prepare_model_for_webvm()
+            
+            if not model_info:
+                logger.warning("No suitable RWKV model available, falling back to mock")
+                self._initialize_mock()
+                return
+            
+            # Initialize RWKV model
             self.rwkv_model = RWKV(
-                model=self.config.model_path,
-                strategy='cpu fp32'
+                model=model_info['model_path'],
+                strategy='cpu fp32',
+                verbose=False
             )
+            
+            # Initialize pipeline with tokenizer
             self.pipeline = PIPELINE(self.rwkv_model, "rwkv_vocab_v20230424")
-            print(f"RWKV Grammar Membrane initialized")
+            
+            # Store model info for reference
+            self.model_info = model_info
+            
+            logger.info(f"RWKV Grammar Membrane initialized with {model_info['model_config'].name}")
+            print(f"Grammar Membrane: Using real RWKV model {model_info['model_config'].name}")
+            
         except Exception as e:
-            print(f"Failed to initialize RWKV: {e}")
+            logger.error(f"Failed to initialize RWKV: {e}")
+            print(f"Grammar Membrane initialization error: {e}")
             self._initialize_mock()
     
     def _initialize_mock(self):
