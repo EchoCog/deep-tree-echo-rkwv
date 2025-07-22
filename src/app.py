@@ -10,6 +10,8 @@ import json
 import time
 import logging
 import threading
+import asyncio
+import aiohttp
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 import uuid
@@ -34,7 +36,10 @@ system_metrics = {
     'active_sessions': 0,
     'total_requests': 0,
     'start_time': datetime.now(),
-    'last_activity': None
+    'last_activity': None,
+    'distributed_requests': 0,
+    'cache_requests': 0,
+    'load_balancer_requests': 0
 }
 
 # Initialize persistent memory system
@@ -47,7 +52,12 @@ CONFIG = {
     'max_sessions': 10,
     'session_timeout_minutes': 30,
     'enable_persistence': True,
-    'data_dir': '/tmp/echo_data'
+    'data_dir': '/tmp/echo_data',
+    # Distributed architecture configuration
+    'enable_distributed_mode': os.environ.get('ENABLE_DISTRIBUTED_MODE', 'false').lower() == 'true',
+    'load_balancer_url': os.environ.get('LOAD_BALANCER_URL', 'http://localhost:8000'),
+    'cache_service_url': os.environ.get('CACHE_SERVICE_URL', 'http://localhost:8002'),
+    'redis_url': os.environ.get('REDIS_URL', 'redis://localhost:6379'),
 }
 
 # Ensure data directory exists and initialize persistent memory
@@ -411,6 +421,104 @@ class MockCognitiveSession:
                 reasoning_counts[reasoning_type] += 1
         
         return dict(reasoning_counts)
+
+# Distributed processing functions
+async def call_distributed_cognitive_service(session_id: str, input_text: str, options: Dict[str, Any] = None) -> Dict[str, Any]:
+    """Call distributed cognitive processing service"""
+    if not CONFIG['enable_distributed_mode']:
+        return None
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            # Call through load balancer
+            url = f"{CONFIG['load_balancer_url']}/api/proxy/cognitive-service"
+            
+            payload = {
+                "method": "POST",
+                "path": "/api/cognitive/process",
+                "headers": {"Content-Type": "application/json"},
+                "body": {
+                    "session_id": session_id,
+                    "input_text": input_text,
+                    "processing_options": options or {},
+                    "priority": 1
+                }
+            }
+            
+            async with session.post(url, json=payload) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    system_metrics['distributed_requests'] += 1
+                    return result.get('data', {})
+                else:
+                    logger.warning(f"Distributed cognitive service failed: {response.status}")
+                    return None
+                    
+    except Exception as e:
+        logger.error(f"Error calling distributed cognitive service: {e}")
+        return None
+
+async def get_from_cache(key: str) -> Optional[Any]:
+    """Get value from distributed cache service"""
+    if not CONFIG['enable_distributed_mode']:
+        return None
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            url = f"{CONFIG['cache_service_url']}/api/cache/{key}"
+            
+            async with session.get(url) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    system_metrics['cache_requests'] += 1
+                    return result.get('value')
+                elif response.status == 404:
+                    return None
+                else:
+                    logger.warning(f"Cache service failed: {response.status}")
+                    return None
+                    
+    except Exception as e:
+        logger.error(f"Error calling cache service: {e}")
+        return None
+
+async def set_in_cache(key: str, value: Any, ttl_seconds: int = 300) -> bool:
+    """Set value in distributed cache service"""
+    if not CONFIG['enable_distributed_mode']:
+        return False
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            url = f"{CONFIG['cache_service_url']}/api/cache/{key}"
+            
+            payload = {
+                "key": key,
+                "value": value,
+                "ttl_seconds": ttl_seconds,
+                "cache_level": "L1"
+            }
+            
+            async with session.post(url, json=payload) as response:
+                if response.status == 200:
+                    system_metrics['cache_requests'] += 1
+                    return True
+                else:
+                    logger.warning(f"Cache set failed: {response.status}")
+                    return False
+                    
+    except Exception as e:
+        logger.error(f"Error setting cache: {e}")
+        return False
+
+def run_async_task(coro):
+    """Helper to run async tasks in sync context"""
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    
+    return loop.run_until_complete(coro)
     
     def _analyze_memory_integration(self) -> Dict[str, int]:
         """Analyze levels of memory integration"""
@@ -500,7 +608,7 @@ def get_session_info(session_id: str):
 
 @app.route('/api/process', methods=['POST'])
 def process_cognitive_input():
-    """Process cognitive input"""
+    """Process cognitive input with distributed capabilities"""
     try:
         data = request.get_json()
         if not data or 'input' not in data:
@@ -510,12 +618,44 @@ def process_cognitive_input():
         if not session_id:
             return jsonify({'error': 'No session ID provided'}), 400
         
+        input_text = data['input']
+        
+        # Try distributed processing first if enabled
+        if CONFIG['enable_distributed_mode']:
+            # Check cache first
+            cache_key = f"cognitive:{session_id}:{hash(input_text)}"
+            cached_result = run_async_task(get_from_cache(cache_key))
+            
+            if cached_result:
+                cached_result['cache_hit'] = True
+                system_metrics['total_requests'] += 1
+                system_metrics['last_activity'] = datetime.now()
+                return jsonify(cached_result)
+            
+            # Try distributed cognitive service
+            distributed_result = run_async_task(
+                call_distributed_cognitive_service(session_id, input_text, data.get('options', {}))
+            )
+            
+            if distributed_result:
+                # Cache the result
+                run_async_task(set_in_cache(cache_key, distributed_result, 300))
+                
+                system_metrics['total_requests'] += 1
+                system_metrics['last_activity'] = datetime.now()
+                return jsonify(distributed_result)
+        
+        # Fallback to local processing
         session = get_cognitive_session(session_id)
         if not session:
             return jsonify({'error': 'Session not found'}), 404
         
-        input_text = data['input']
         result = session.process_input(input_text)
+        
+        # Cache the result if distributed mode is enabled
+        if CONFIG['enable_distributed_mode']:
+            cache_key = f"cognitive:{session_id}:{hash(input_text)}"
+            run_async_task(set_in_cache(cache_key, result, 300))
         
         system_metrics['total_requests'] += 1
         system_metrics['last_activity'] = datetime.now()
@@ -544,10 +684,26 @@ def get_conversation_history(session_id: str):
 
 @app.route('/api/status')
 def system_status():
-    """Get system status"""
+    """Get system status with distributed architecture information"""
     cleanup_expired_sessions()
     
     uptime = datetime.now() - system_metrics['start_time']
+    
+    # Get distributed service status if enabled
+    distributed_status = {}
+    if CONFIG['enable_distributed_mode']:
+        try:
+            # Check load balancer status
+            lb_status = run_async_task(check_service_health(f"{CONFIG['load_balancer_url']}/health"))
+            distributed_status['load_balancer'] = lb_status
+            
+            # Check cache service status
+            cache_status = run_async_task(check_service_health(f"{CONFIG['cache_service_url']}/health"))
+            distributed_status['cache_service'] = cache_status
+            
+        except Exception as e:
+            logger.error(f"Error checking distributed service status: {e}")
+            distributed_status['error'] = str(e)
     
     return jsonify({
         'status': 'online',
@@ -556,8 +712,23 @@ def system_status():
         'config': CONFIG,
         'metrics': system_metrics,
         'active_sessions': len(cognitive_sessions),
-        'memory_usage_estimate_mb': len(cognitive_sessions) * 10  # Rough estimate
+        'memory_usage_estimate_mb': len(cognitive_sessions) * 10,  # Rough estimate
+        'distributed_mode': CONFIG['enable_distributed_mode'],
+        'distributed_services': distributed_status
     })
+
+async def check_service_health(url: str) -> Dict[str, Any]:
+    """Check health of a distributed service"""
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    return {'status': 'healthy', 'data': data}
+                else:
+                    return {'status': 'unhealthy', 'status_code': response.status}
+    except Exception as e:
+        return {'status': 'unreachable', 'error': str(e)}
 
 @app.route('/api/metrics')
 def detailed_metrics():
@@ -863,6 +1034,71 @@ def health_check():
         'timestamp': datetime.now().isoformat(),
         'active_sessions': len(cognitive_sessions)
     })
+
+@app.route('/metrics')
+def prometheus_metrics():
+    """Prometheus-compatible metrics endpoint"""
+    metrics = []
+    
+    # System metrics
+    metrics.extend([
+        f"deep_echo_active_sessions {len(cognitive_sessions)}",
+        f"deep_echo_total_sessions {system_metrics['total_sessions']}",
+        f"deep_echo_total_requests {system_metrics['total_requests']}",
+        f"deep_echo_distributed_requests {system_metrics['distributed_requests']}",
+        f"deep_echo_cache_requests {system_metrics['cache_requests']}",
+        f"deep_echo_load_balancer_requests {system_metrics['load_balancer_requests']}"
+    ])
+    
+    # Uptime
+    uptime_seconds = (datetime.now() - system_metrics['start_time']).total_seconds()
+    metrics.append(f"deep_echo_uptime_seconds {uptime_seconds}")
+    
+    # Memory usage estimate
+    memory_usage_mb = len(cognitive_sessions) * 10
+    metrics.append(f"deep_echo_memory_usage_mb {memory_usage_mb}")
+    
+    # Distributed mode status
+    metrics.append(f"deep_echo_distributed_mode {1 if CONFIG['enable_distributed_mode'] else 0}")
+    
+    # Configuration metrics
+    metrics.extend([
+        f"deep_echo_max_sessions {CONFIG['max_sessions']}",
+        f"deep_echo_memory_limit_mb {CONFIG['memory_limit_mb']}",
+        f"deep_echo_webvm_mode {1 if CONFIG['webvm_mode'] else 0}"
+    ])
+    
+    # Session performance metrics
+    if cognitive_sessions:
+        total_interactions = sum(
+            len(session.conversation_history) for session in cognitive_sessions.values()
+        )
+        avg_processing_times = [
+            session.processing_stats['avg_processing_time'] 
+            for session in cognitive_sessions.values()
+            if session.processing_stats['avg_processing_time'] > 0
+        ]
+        avg_response_time = sum(avg_processing_times) / len(avg_processing_times) if avg_processing_times else 0
+        
+        metrics.extend([
+            f"deep_echo_total_interactions {total_interactions}",
+            f"deep_echo_avg_response_time_ms {avg_response_time}"
+        ])
+    
+    # Persistent memory metrics
+    if persistent_memory:
+        try:
+            stats = persistent_memory.get_system_stats()
+            db_stats = stats.get('database_stats', {})
+            metrics.extend([
+                f"deep_echo_total_memories {db_stats.get('total_memories', 0)}",
+                f"deep_echo_memory_types {len(db_stats.get('memory_types', []))}",
+                f"deep_echo_avg_memory_importance {db_stats.get('avg_importance', 0)}"
+            ])
+        except Exception as e:
+            logger.error(f"Error getting memory stats for metrics: {e}")
+    
+    return '\n'.join(metrics), 200, {'Content-Type': 'text/plain; version=0.0.4; charset=utf-8'}
 
 # Template directory setup
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
