@@ -453,7 +453,7 @@ Grammar Response:"""
         )
 
 class EchoRWKVIntegrationEngine:
-    """Main integration engine for Echo-RWKV system with persistent memory"""
+    """Main integration engine for Echo-RWKV system with advanced cognitive capabilities"""
     
     def __init__(self, use_real_rwkv: bool = False, persistent_memory: PersistentMemorySystem = None):
         self.use_real_rwkv = use_real_rwkv
@@ -462,15 +462,22 @@ class EchoRWKVIntegrationEngine:
         self.membrane_processor = None
         self.initialized = False
         self.processing_queue = queue.Queue()
+        
+        # Advanced cognitive components (will be initialized later to avoid circular imports)
+        self.meta_cognitive_system = None
+        self.reasoning_system = None
+        self.adaptive_learning_system = None
+        
         self.stats = {
             'total_requests': 0,
             'successful_requests': 0,
             'avg_response_time': 0.0,
-            'start_time': datetime.now()
+            'start_time': datetime.now(),
+            'advanced_features_enabled': False
         }
     
     async def initialize(self, config: Dict[str, Any]) -> bool:
-        """Initialize the integration engine"""
+        """Initialize the integration engine with advanced cognitive capabilities"""
         try:
             # Initialize RWKV interface
             if self.use_real_rwkv:
@@ -487,6 +494,28 @@ class EchoRWKVIntegrationEngine:
             # Initialize membrane processor with persistent memory
             self.membrane_processor = EchoMembraneProcessor(self.rwkv_interface, self.persistent_memory)
             
+            # Initialize advanced cognitive components if requested
+            if config.get('enable_advanced_cognitive', True):
+                try:
+                    # Import here to avoid circular imports
+                    from cognitive_reflection import MetaCognitiveReflectionSystem
+                    from reasoning_chains import ComplexReasoningSystem
+                    from adaptive_learning import AdaptiveLearningSystem
+                    
+                    self.meta_cognitive_system = MetaCognitiveReflectionSystem()
+                    self.reasoning_system = ComplexReasoningSystem()
+                    self.adaptive_learning_system = AdaptiveLearningSystem()
+                    
+                    self.stats['advanced_features_enabled'] = True
+                    logger.info("Advanced cognitive capabilities initialized")
+                    
+                except ImportError as e:
+                    logger.warning(f"Could not initialize advanced cognitive features: {e}")
+                    self.stats['advanced_features_enabled'] = False
+                except Exception as e:
+                    logger.error(f"Error initializing advanced cognitive features: {e}")
+                    self.stats['advanced_features_enabled'] = False
+            
             self.initialized = True
             logger.info("Echo-RWKV integration engine initialized successfully")
             return True
@@ -496,27 +525,97 @@ class EchoRWKVIntegrationEngine:
             return False
     
     async def process_cognitive_input(self, context: CognitiveContext) -> IntegratedCognitiveResponse:
-        """Process input through integrated cognitive architecture"""
+        """Process input through integrated cognitive architecture with advanced capabilities"""
         if not self.initialized:
             raise RuntimeError("Integration engine not initialized")
         
         start_time = time.time()
         self.stats['total_requests'] += 1
         
+        # Initialize processing context
+        processing_context = {
+            'user_input': context.user_input,
+            'session_id': context.session_id,
+            'user_id': getattr(context, 'user_id', 'anonymous'),
+            'conversation_history': context.conversation_history,
+            'memory_state': context.memory_state,
+            'processing_goals': context.processing_goals,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        # Apply meta-cognitive pre-processing if available
+        meta_context = {}
+        if self.meta_cognitive_system:
+            try:
+                meta_context = self.meta_cognitive_system.before_processing(processing_context)
+                logger.debug(f"Meta-cognitive strategy selected: {meta_context.get('strategy_selected')}")
+            except Exception as e:
+                logger.error(f"Error in meta-cognitive pre-processing: {e}")
+        
+        # Apply adaptive learning personalization if available  
+        if self.adaptive_learning_system:
+            try:
+                personalization_result = self.adaptive_learning_system.get_personalization_context(
+                    processing_context['user_id'], 
+                    processing_context['session_id'],
+                    processing_context
+                )
+                if personalization_result.get('success'):
+                    processing_context.update(personalization_result['personalized_context'])
+                    logger.debug("Applied user personalization to processing context")
+            except Exception as e:
+                logger.error(f"Error applying personalization: {e}")
+        
         try:
-            # Process through all membranes concurrently
-            memory_task = self.membrane_processor.process_memory_membrane(context)
-            reasoning_task = self.membrane_processor.process_reasoning_membrane(context)
-            grammar_task = self.membrane_processor.process_grammar_membrane(context)
+            # Check if complex reasoning is needed
+            needs_complex_reasoning = self._requires_complex_reasoning(context.user_input)
             
-            # Wait for all membrane responses
-            memory_response, reasoning_response, grammar_response = await asyncio.gather(
-                memory_task, reasoning_task, grammar_task
-            )
+            if needs_complex_reasoning and self.reasoning_system:
+                # Use complex reasoning system
+                reasoning_result = await self.reasoning_system.execute_reasoning(
+                    context.user_input, processing_context
+                )
+                
+                if reasoning_result.get('success'):
+                    # Create integrated response with reasoning
+                    memory_response = await self.membrane_processor.process_memory_membrane(context)
+                    grammar_response = await self.membrane_processor.process_grammar_membrane(context)
+                    
+                    # Create reasoning membrane response from complex reasoning
+                    reasoning_response = MembraneResponse(
+                        membrane_type="reasoning",
+                        input_text=context.user_input,
+                        output_text=reasoning_result['conclusion'],
+                        confidence=reasoning_result['confidence'],
+                        processing_time=reasoning_result.get('processing_time', 0.0),
+                        internal_state={
+                            'reasoning_type': reasoning_result['reasoning_type'],
+                            'chain_id': reasoning_result['chain_id'],
+                            'steps': len(reasoning_result.get('steps', [])),
+                            'complex_reasoning': True
+                        },
+                        metadata={
+                            'complex_reasoning_enabled': True,
+                            'reasoning_explanation': reasoning_result.get('explanation', '')
+                        }
+                    )
+                else:
+                    # Fallback to standard reasoning if complex reasoning fails
+                    reasoning_response = await self.membrane_processor.process_reasoning_membrane(context)
+            else:
+                # Standard membrane processing
+                memory_task = self.membrane_processor.process_memory_membrane(context)
+                reasoning_task = self.membrane_processor.process_reasoning_membrane(context)
+                grammar_task = self.membrane_processor.process_grammar_membrane(context)
+                
+                # Wait for all membrane responses
+                memory_response, reasoning_response, grammar_response = await asyncio.gather(
+                    memory_task, reasoning_task, grammar_task
+                )
             
-            # Integrate responses
-            integrated_output = await self._integrate_membrane_responses(
-                memory_response, reasoning_response, grammar_response, context
+            # Integrate responses with advanced memory integration
+            integrated_output = await self._integrate_membrane_responses_advanced(
+                memory_response, reasoning_response, grammar_response, context, processing_context
             )
             
             # Calculate metrics
@@ -525,14 +624,8 @@ class EchoRWKVIntegrationEngine:
                 memory_response, reasoning_response, grammar_response
             )
             
-            # Update stats
-            self.stats['successful_requests'] += 1
-            self.stats['avg_response_time'] = (
-                (self.stats['avg_response_time'] * (self.stats['successful_requests'] - 1) + total_time) /
-                self.stats['successful_requests']
-            )
-            
-            return IntegratedCognitiveResponse(
+            # Create response with additional advanced features data
+            response = IntegratedCognitiveResponse(
                 user_input=context.user_input,
                 memory_response=memory_response,
                 reasoning_response=reasoning_response,
@@ -540,10 +633,75 @@ class EchoRWKVIntegrationEngine:
                 integrated_output=integrated_output,
                 total_processing_time=total_time,
                 confidence_score=confidence_score,
-                cognitive_state_changes=self._extract_state_changes(
-                    memory_response, reasoning_response, grammar_response
+                cognitive_state_changes=self._extract_state_changes_advanced(
+                    memory_response, reasoning_response, grammar_response, processing_context
                 )
             )
+            
+            # Apply meta-cognitive post-processing if available
+            meta_reflection = {}
+            if self.meta_cognitive_system:
+                try:
+                    processing_results = {
+                        'session_id': context.session_id,
+                        'user_input': context.user_input,
+                        'total_processing_time': total_time,
+                        'memory_processing_time': memory_response.processing_time,
+                        'reasoning_processing_time': reasoning_response.processing_time,
+                        'grammar_processing_time': grammar_response.processing_time,
+                        'confidence_score': confidence_score,
+                        'memory_retrievals': memory_response.internal_state.get('memories_retrieved', 0),
+                        'reasoning_complexity': reasoning_response.internal_state.get('reasoning_type', 'general'),
+                        'membrane_responses': {
+                            'memory': memory_response,
+                            'reasoning': reasoning_response,
+                            'grammar': grammar_response
+                        }
+                    }
+                    
+                    meta_reflection = self.meta_cognitive_system.after_processing(
+                        processing_results, meta_context
+                    )
+                    
+                    # Add meta-cognitive insights to response
+                    if hasattr(response, 'cognitive_state_changes'):
+                        response.cognitive_state_changes['meta_cognitive_reflection'] = meta_reflection
+                        
+                except Exception as e:
+                    logger.error(f"Error in meta-cognitive post-processing: {e}")
+            
+            # Process interaction for adaptive learning if available
+            if self.adaptive_learning_system:
+                try:
+                    interaction_data = {
+                        'user_id': processing_context['user_id'],
+                        'session_id': processing_context['session_id'],
+                        'user_input': context.user_input,
+                        'response_quality': confidence_score,
+                        'processing_time': total_time,
+                        'strategy_used': meta_context.get('strategy_selected', 'unknown'),
+                        'complexity': self._assess_query_complexity(context.user_input),
+                        'timestamp': processing_context['timestamp']
+                    }
+                    
+                    learning_result = self.adaptive_learning_system.process_interaction_for_learning(
+                        interaction_data
+                    )
+                    
+                    if hasattr(response, 'cognitive_state_changes'):
+                        response.cognitive_state_changes['adaptive_learning'] = learning_result
+                        
+                except Exception as e:
+                    logger.error(f"Error in adaptive learning processing: {e}")
+            
+            # Update stats
+            self.stats['successful_requests'] += 1
+            self.stats['avg_response_time'] = (
+                (self.stats['avg_response_time'] * (self.stats['successful_requests'] - 1) + total_time) /
+                self.stats['successful_requests']
+            )
+            
+            return response
             
         except Exception as e:
             logger.error(f"Error processing cognitive input: {e}")
@@ -617,16 +775,237 @@ Integrated Response:"""
         }
     
     def get_system_status(self) -> Dict[str, Any]:
-        """Get comprehensive system status"""
-        return {
+        """Get comprehensive system status including advanced cognitive features"""
+        status = {
             'initialized': self.initialized,
             'rwkv_interface': self.rwkv_interface.get_model_state() if self.rwkv_interface else None,
             'processing_stats': self.stats,
             'uptime_seconds': (datetime.now() - self.stats['start_time']).total_seconds(),
             'success_rate': (
                 self.stats['successful_requests'] / max(1, self.stats['total_requests'])
-            )
+            ),
+            'advanced_features': {
+                'enabled': self.stats['advanced_features_enabled'],
+                'meta_cognitive_system': self.meta_cognitive_system is not None,
+                'reasoning_system': self.reasoning_system is not None,
+                'adaptive_learning_system': self.adaptive_learning_system is not None
+            }
         }
+        
+        # Add advanced system status if available
+        if self.meta_cognitive_system:
+            try:
+                status['meta_cognitive_insights'] = self.meta_cognitive_system.get_cognitive_insights()
+            except Exception as e:
+                logger.error(f"Error getting meta-cognitive insights: {e}")
+        
+        if self.reasoning_system:
+            try:
+                status['reasoning_stats'] = self.reasoning_system.get_system_stats()
+            except Exception as e:
+                logger.error(f"Error getting reasoning stats: {e}")
+        
+        if self.adaptive_learning_system:
+            try:
+                status['adaptive_learning_status'] = self.adaptive_learning_system.get_system_status()
+            except Exception as e:
+                logger.error(f"Error getting adaptive learning status: {e}")
+        
+        return status
+    
+    def _requires_complex_reasoning(self, user_input: str) -> bool:
+        """Determine if input requires complex reasoning"""
+        complex_indicators = [
+            'explain why', 'how does', 'what causes', 'analyze', 'compare',
+            'step by step', 'reasoning', 'logic', 'because', 'therefore',
+            'prove that', 'demonstrate', 'argue', 'justify'
+        ]
+        
+        return any(indicator in user_input.lower() for indicator in complex_indicators)
+    
+    def _assess_query_complexity(self, user_input: str) -> str:
+        """Assess complexity of user query"""
+        words = user_input.split()
+        word_count = len(words)
+        
+        question_marks = user_input.count('?')
+        complex_words = len([w for w in words if len(w) > 8])
+        
+        complexity_score = 0
+        if word_count > 20:
+            complexity_score += 2
+        elif word_count > 10:
+            complexity_score += 1
+        
+        if question_marks > 1:
+            complexity_score += 1
+        
+        if complex_words > 3:
+            complexity_score += 1
+        
+        if complexity_score >= 3:
+            return 'high'
+        elif complexity_score >= 1:
+            return 'medium'
+        else:
+            return 'low'
+    
+    async def _integrate_membrane_responses_advanced(
+        self, 
+        memory: MembraneResponse, 
+        reasoning: MembraneResponse, 
+        grammar: MembraneResponse,
+        context: CognitiveContext,
+        processing_context: Dict[str, Any]
+    ) -> str:
+        """Advanced integration with cross-membrane memory sharing and feedback loops"""
+        
+        # Extract advanced integration context
+        user_patterns = processing_context.get('user_patterns', {})
+        preferred_style = processing_context.get('preferred_response_style', 'balanced')
+        cognitive_style = processing_context.get('cognitive_style', {})
+        
+        # Create enhanced integration prompt
+        integration_prompt = f"""
+Advanced Cognitive Integration Task:
+User Input: {context.user_input}
+User Cognitive Style: {cognitive_style}
+Preferred Response Style: {preferred_style}
+
+Membrane Responses:
+Memory: {memory.output_text}
+- Retrieved Memories: {memory.internal_state.get('memories_retrieved', 0)}
+- Memory Confidence: {memory.confidence}
+
+Reasoning: {reasoning.output_text}
+- Reasoning Type: {reasoning.internal_state.get('reasoning_type', 'general')}
+- Reasoning Confidence: {reasoning.confidence}
+- Complex Reasoning: {reasoning.internal_state.get('complex_reasoning', False)}
+
+Grammar: {grammar.output_text}
+- Grammar Confidence: {grammar.confidence}
+
+Cross-Membrane Integration Requirements:
+1. Synthesize insights from all membranes with attention to confidence levels
+2. Apply user's cognitive style preferences: {cognitive_style}
+3. Use preferred response style: {preferred_style}
+4. Ensure memory-reasoning feedback loops are established
+5. Maintain consistency across all cognitive processes
+6. Address the user's input comprehensively and accurately
+
+Advanced Integrated Response:"""
+        
+        # Use RWKV to generate advanced integrated response
+        integrated_response = await self.rwkv_interface.generate_response(integration_prompt, context)
+        
+        return integrated_response
+    
+    def _extract_state_changes_advanced(
+        self, 
+        memory: MembraneResponse, 
+        reasoning: MembraneResponse, 
+        grammar: MembraneResponse,
+        processing_context: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Extract advanced cognitive state changes including cross-membrane interactions"""
+        
+        base_changes = self._extract_state_changes(memory, reasoning, grammar)
+        
+        # Add advanced state tracking
+        advanced_changes = {
+            'cross_membrane_interactions': {
+                'memory_to_reasoning': memory.internal_state.get('memories_retrieved', 0) > 0,
+                'reasoning_to_memory': reasoning.internal_state.get('reasoning_type') in ['deductive', 'inductive'],
+                'grammar_influence': grammar.confidence > 0.8
+            },
+            'personalization_applied': {
+                'style_adaptation': processing_context.get('preferred_response_style') is not None,
+                'cognitive_style_matching': processing_context.get('cognitive_style') is not None,
+                'pattern_recognition': processing_context.get('user_patterns') is not None
+            },
+            'adaptive_learning_opportunities': {
+                'preference_learning': memory.confidence != reasoning.confidence != grammar.confidence,
+                'strategy_optimization': any(resp.confidence < 0.6 for resp in [memory, reasoning, grammar]),
+                'feedback_incorporation': True  # Always available for learning
+            },
+            'memory_consolidation': {
+                'new_memories_stored': memory.internal_state.get('new_memory_stored', False),
+                'memory_associations_created': len(memory.internal_state.get('associations', [])) > 0,
+                'cross_session_learning': memory.internal_state.get('persistent_memories', 0) > 0
+            }
+        }
+        
+        # Merge with base changes
+        base_changes.update(advanced_changes)
+        return base_changes
+    
+    async def get_cognitive_insights(self, user_id: str, session_id: str) -> Dict[str, Any]:
+        """Get comprehensive cognitive insights for user interface"""
+        insights = {
+            'timestamp': datetime.now().isoformat(),
+            'basic_insights': {
+                'system_status': 'operational' if self.initialized else 'not_initialized',
+                'processing_stats': self.stats
+            }
+        }
+        
+        # Add meta-cognitive insights if available
+        if self.meta_cognitive_system:
+            try:
+                insights['meta_cognitive'] = self.meta_cognitive_system.get_cognitive_insights()
+            except Exception as e:
+                logger.error(f"Error getting meta-cognitive insights: {e}")
+                insights['meta_cognitive'] = {'error': str(e)}
+        
+        # Add reasoning insights if available
+        if self.reasoning_system:
+            try:
+                insights['reasoning'] = self.reasoning_system.get_system_stats()
+            except Exception as e:
+                logger.error(f"Error getting reasoning insights: {e}")
+                insights['reasoning'] = {'error': str(e)}
+        
+        # Add adaptive learning insights if available
+        if self.adaptive_learning_system:
+            try:
+                insights['adaptive_learning'] = self.adaptive_learning_system.get_user_insights(
+                    user_id, session_id
+                )
+            except Exception as e:
+                logger.error(f"Error getting adaptive learning insights: {e}")
+                insights['adaptive_learning'] = {'error': str(e)}
+        
+        return insights
+    
+    async def submit_user_feedback(self, feedback_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Submit user feedback to adaptive learning and meta-cognitive systems"""
+        results = {
+            'feedback_processed': False,
+            'systems_updated': []
+        }
+        
+        # Submit to adaptive learning system
+        if self.adaptive_learning_system:
+            try:
+                learning_result = self.adaptive_learning_system.submit_feedback(feedback_data)
+                if learning_result.get('success'):
+                    results['systems_updated'].append('adaptive_learning')
+                    results['adaptive_learning_result'] = learning_result
+            except Exception as e:
+                logger.error(f"Error submitting feedback to adaptive learning: {e}")
+                results['adaptive_learning_error'] = str(e)
+        
+        # Submit to meta-cognitive system
+        if self.meta_cognitive_system:
+            try:
+                self.meta_cognitive_system.adapt_from_feedback(feedback_data)
+                results['systems_updated'].append('meta_cognitive')
+            except Exception as e:
+                logger.error(f"Error submitting feedback to meta-cognitive system: {e}")
+                results['meta_cognitive_error'] = str(e)
+        
+        results['feedback_processed'] = len(results['systems_updated']) > 0
+        return results
 
 # Example usage and testing
 async def test_integration():
