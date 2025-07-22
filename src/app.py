@@ -13,6 +13,7 @@ import threading
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 import uuid
+from collections import defaultdict
 from persistent_memory import PersistentMemorySystem, MemoryQuery
 
 # Configure logging
@@ -80,19 +81,19 @@ class MockCognitiveSession:
         }
     
     def process_input(self, input_text: str) -> Dict[str, Any]:
-        """Process cognitive input through mock membranes"""
+        """Process cognitive input through mock membranes with advanced capabilities"""
         start_time = time.time()
         self.last_activity = datetime.now()
         self.processing_stats['total_inputs'] += 1
         
-        # Mock membrane processing
+        # Mock membrane processing with enhanced cognitive features
         memory_response = self._process_memory_membrane(input_text)
         reasoning_response = self._process_reasoning_membrane(input_text)
         grammar_response = self._process_grammar_membrane(input_text)
         
-        # Integrate responses
-        integrated_response = self._integrate_responses(
-            memory_response, reasoning_response, grammar_response
+        # Integrate responses with advanced cognitive awareness
+        integrated_response = self._integrate_responses_advanced(
+            memory_response, reasoning_response, grammar_response, input_text
         )
         
         processing_time = time.time() - start_time
@@ -101,7 +102,7 @@ class MockCognitiveSession:
             self.processing_stats['total_inputs']
         )
         
-        # Store in conversation history
+        # Store in conversation history with advanced metadata
         conversation_entry = {
             'timestamp': datetime.now().isoformat(),
             'input': input_text,
@@ -111,16 +112,23 @@ class MockCognitiveSession:
                 'memory': memory_response,
                 'reasoning': reasoning_response,
                 'grammar': grammar_response
+            },
+            'cognitive_metadata': {
+                'complexity_detected': self._assess_input_complexity(input_text),
+                'reasoning_type_suggested': self._suggest_reasoning_type(input_text),
+                'memory_integration_level': self._assess_memory_integration(input_text),
+                'adaptive_learning_opportunities': self._identify_learning_opportunities(input_text)
             }
         }
         
         self.conversation_history.append(conversation_entry)
         
-        # Update episodic memory
+        # Update episodic memory with enhanced context
         self.memory_state['episodic'].append({
             'event': input_text,
             'response': integrated_response,
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now().isoformat(),
+            'cognitive_context': conversation_entry['cognitive_metadata']
         })
         
         return conversation_entry
@@ -210,6 +218,135 @@ class MockCognitiveSession:
         
         return f"Integrated cognitive response{memory_context}: Drawing from memory ({len(self.memory_state['episodic'])} experiences), applying reasoning patterns, and considering linguistic structure. {memory[:50]}..."
     
+    def _integrate_responses_advanced(self, memory: str, reasoning: str, grammar: str, input_text: str) -> str:
+        """Advanced integration with cognitive awareness"""
+        # Get memory statistics if persistent memory is available
+        memory_context = ""
+        if persistent_memory:
+            try:
+                stats = persistent_memory.get_system_stats()
+                total_memories = stats.get('database_stats', {}).get('total_memories', 0)
+                if total_memories > 0:
+                    memory_context = f" [Drawing from {total_memories} persistent memories]"
+            except Exception as e:
+                logger.error(f"Error getting memory stats: {e}")
+        
+        # Assess cognitive requirements
+        complexity = self._assess_input_complexity(input_text)
+        reasoning_type = self._suggest_reasoning_type(input_text)
+        memory_integration = self._assess_memory_integration(input_text)
+        
+        # Create sophisticated integration
+        integration_aspects = []
+        
+        if memory_integration == 'high':
+            integration_aspects.append(f"memory-guided processing ({len(self.memory_state['episodic'])} experiences)")
+        
+        if reasoning_type != 'general':
+            integration_aspects.append(f"{reasoning_type} reasoning patterns")
+            
+        if complexity in ['medium', 'high']:
+            integration_aspects.append("multi-layered analysis")
+        
+        integration_description = ", ".join(integration_aspects) if integration_aspects else "standard cognitive processing"
+        
+        return f"Advanced cognitive integration{memory_context}: Applying {integration_description}. Confidence: {self._calculate_response_confidence(memory, reasoning, grammar):.2f}. {memory[:50]}..."
+    
+    def _assess_input_complexity(self, text: str) -> str:
+        """Assess cognitive complexity of input"""
+        words = text.split()
+        word_count = len(words)
+        
+        # Count complexity indicators
+        questions = text.count('?')
+        logical_words = len([w for w in words if w.lower() in 
+                           ['because', 'therefore', 'however', 'although', 'if', 'then', 'analyze', 'explain']])
+        
+        complexity_score = 0
+        if word_count > 20:
+            complexity_score += 2
+        elif word_count > 10:
+            complexity_score += 1
+        
+        if questions > 1:
+            complexity_score += 1
+            
+        if logical_words > 2:
+            complexity_score += 1
+        
+        if complexity_score >= 3:
+            return 'high'
+        elif complexity_score >= 1:
+            return 'medium'
+        else:
+            return 'low'
+    
+    def _suggest_reasoning_type(self, text: str) -> str:
+        """Suggest appropriate reasoning type for input"""
+        text_lower = text.lower()
+        
+        if any(word in text_lower for word in ['why', 'explain', 'because', 'cause']):
+            return 'abductive'
+        elif any(word in text_lower for word in ['if', 'then', 'therefore', 'must', 'all']):
+            return 'deductive'
+        elif any(word in text_lower for word in ['pattern', 'usually', 'often', 'tend to']):
+            return 'inductive'
+        elif any(word in text_lower for word in ['like', 'similar', 'analogy', 'compare']):
+            return 'analogical'
+        else:
+            return 'general'
+    
+    def _assess_memory_integration(self, text: str) -> str:
+        """Assess level of memory integration needed"""
+        memory_keywords = ['remember', 'recall', 'before', 'earlier', 'previous', 'last time', 'history']
+        
+        keyword_count = sum(1 for keyword in memory_keywords if keyword in text.lower())
+        
+        if keyword_count >= 3:
+            return 'high'
+        elif keyword_count >= 1:
+            return 'medium'
+        else:
+            return 'low'
+    
+    def _identify_learning_opportunities(self, text: str) -> List[str]:
+        """Identify opportunities for adaptive learning"""
+        opportunities = []
+        
+        text_lower = text.lower()
+        
+        if any(word in text_lower for word in ['prefer', 'like', 'want', 'need']):
+            opportunities.append('preference_learning')
+        
+        if any(word in text_lower for word in ['explain', 'detail', 'more', 'less']):
+            opportunities.append('response_style_adaptation')
+        
+        if any(word in text_lower for word in ['fast', 'slow', 'quick', 'time']):
+            opportunities.append('processing_speed_optimization')
+        
+        if '?' in text:
+            opportunities.append('question_handling_improvement')
+        
+        return opportunities
+    
+    def _calculate_response_confidence(self, memory: str, reasoning: str, grammar: str) -> float:
+        """Calculate confidence score for integrated response"""
+        # Simple heuristic based on response characteristics
+        base_confidence = 0.7
+        
+        # Adjust based on response length and complexity
+        total_length = len(memory) + len(reasoning) + len(grammar)
+        if total_length > 200:
+            base_confidence += 0.1
+        elif total_length < 50:
+            base_confidence -= 0.1
+        
+        # Adjust based on memory availability
+        if len(self.memory_state['episodic']) > 5:
+            base_confidence += 0.1
+        
+        return min(1.0, max(0.0, base_confidence))
+    
     def _is_memory_significant(self, text: str) -> bool:
         """Determine if input should be stored in persistent memory"""
         # Store memories that are questions, statements with significant content, or learning-related
@@ -252,6 +389,39 @@ class MockCognitiveSession:
             'conversation_length': len(self.conversation_history),
             'processing_stats': self.processing_stats
         }
+    
+    def _analyze_complexity_distribution(self) -> Dict[str, int]:
+        """Analyze distribution of complexity levels in conversations"""
+        complexity_counts = {'low': 0, 'medium': 0, 'high': 0}
+        
+        for entry in self.conversation_history:
+            if 'cognitive_metadata' in entry:
+                complexity = entry['cognitive_metadata'].get('complexity_detected', 'low')
+                complexity_counts[complexity] += 1
+        
+        return complexity_counts
+    
+    def _analyze_reasoning_types(self) -> Dict[str, int]:
+        """Analyze reasoning types used in conversations"""
+        reasoning_counts = defaultdict(int)
+        
+        for entry in self.conversation_history:
+            if 'cognitive_metadata' in entry:
+                reasoning_type = entry['cognitive_metadata'].get('reasoning_type_suggested', 'general')
+                reasoning_counts[reasoning_type] += 1
+        
+        return dict(reasoning_counts)
+    
+    def _analyze_memory_integration(self) -> Dict[str, int]:
+        """Analyze levels of memory integration"""
+        integration_counts = {'low': 0, 'medium': 0, 'high': 0}
+        
+        for entry in self.conversation_history:
+            if 'cognitive_metadata' in entry:
+                integration_level = entry['cognitive_metadata'].get('memory_integration_level', 'low')
+                integration_counts[integration_level] += 1
+        
+        return integration_counts
 
 def create_cognitive_session() -> str:
     """Create new cognitive session"""
@@ -496,6 +666,193 @@ def memory_statistics():
         return jsonify(stats)
     except Exception as e:
         logger.error(f"Error getting memory statistics: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# Advanced Cognitive Processing API Endpoints
+
+@app.route('/api/cognitive/insights/<session_id>')
+def get_cognitive_insights(session_id: str):
+    """Get comprehensive cognitive insights for a session"""
+    try:
+        session = get_cognitive_session(session_id)
+        if not session:
+            return jsonify({'error': 'Session not found'}), 404
+        
+        # Basic insights from session
+        basic_insights = {
+            'session_summary': session.get_state_summary(),
+            'conversation_analysis': {
+                'total_interactions': len(session.conversation_history),
+                'avg_processing_time': session.processing_stats['avg_processing_time'],
+                'complexity_distribution': session._analyze_complexity_distribution(),
+                'reasoning_type_usage': session._analyze_reasoning_types(),
+                'memory_integration_levels': session._analyze_memory_integration()
+            }
+        }
+        
+        # Try to get advanced insights if available
+        advanced_insights = {}
+        try:
+            # This would integrate with the advanced systems if they were initialized
+            # For now, return basic insights with placeholders for advanced features
+            advanced_insights = {
+                'meta_cognitive_status': 'Available (Mock)',
+                'reasoning_chain_analysis': 'Available (Mock)',
+                'adaptive_learning_progress': 'Available (Mock)',
+                'personalization_level': 'Basic'
+            }
+        except Exception as e:
+            logger.warning(f"Advanced insights not available: {e}")
+        
+        return jsonify({
+            'session_id': session_id,
+            'basic_insights': basic_insights,
+            'advanced_insights': advanced_insights,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting cognitive insights: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/cognitive/reasoning/execute', methods=['POST'])
+def execute_complex_reasoning():
+    """Execute complex reasoning for a query"""
+    try:
+        data = request.get_json()
+        if not data or 'query' not in data:
+            return jsonify({'error': 'No query provided'}), 400
+        
+        query = data['query']
+        session_id = data.get('session_id', 'default')
+        reasoning_type = data.get('reasoning_type')  # optional
+        
+        # Mock complex reasoning execution
+        reasoning_result = {
+            'success': True,
+            'query': query,
+            'reasoning_type': reasoning_type or 'auto-selected',
+            'chain_id': f"mock_chain_{int(time.time())}",
+            'confidence': 0.85,
+            'conclusion': f"Through complex reasoning analysis: {query}",
+            'explanation': f"Applied {reasoning_type or 'adaptive'} reasoning with multi-step validation",
+            'steps': [
+                {'step': 1, 'type': 'analysis', 'description': 'Analyzed query components'},
+                {'step': 2, 'type': 'reasoning', 'description': 'Applied logical inference'},
+                {'step': 3, 'type': 'validation', 'description': 'Validated reasoning chain'},
+                {'step': 4, 'type': 'conclusion', 'description': 'Generated final conclusion'}
+            ],
+            'processing_time': 0.5,
+            'validation_score': 0.9
+        }
+        
+        return jsonify(reasoning_result)
+        
+    except Exception as e:
+        logger.error(f"Error in complex reasoning execution: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/cognitive/feedback', methods=['POST'])
+def submit_cognitive_feedback():
+    """Submit feedback for adaptive learning"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No feedback data provided'}), 400
+        
+        required_fields = ['session_id', 'feedback_type', 'feedback_value']
+        if not all(field in data for field in required_fields):
+            return jsonify({'error': 'Missing required feedback fields'}), 400
+        
+        # Mock feedback processing
+        feedback_result = {
+            'success': True,
+            'feedback_id': f"fb_{int(time.time())}",
+            'processing_status': 'processed',
+            'learning_updates': {
+                'preferences_updated': 1,
+                'strategy_adaptations': 1,
+                'personalization_improved': True
+            },
+            'message': 'Feedback processed successfully and integrated into adaptive learning system'
+        }
+        
+        return jsonify(feedback_result)
+        
+    except Exception as e:
+        logger.error(f"Error processing cognitive feedback: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/cognitive/personalization/<session_id>')
+def get_personalization_status(session_id: str):
+    """Get personalization status for a session"""
+    try:
+        session = get_cognitive_session(session_id)
+        if not session:
+            return jsonify({'error': 'Session not found'}), 404
+        
+        # Mock personalization analysis
+        personalization_status = {
+            'session_id': session_id,
+            'personalization_level': 'moderate',
+            'learned_preferences': {
+                'response_style': 'analytical',
+                'detail_level': 'comprehensive',
+                'reasoning_preference': 'step_by_step'
+            },
+            'adaptation_opportunities': [
+                'Response timing optimization',
+                'Content complexity adjustment',
+                'Interaction style refinement'
+            ],
+            'learning_progress': {
+                'total_interactions_analyzed': len(session.conversation_history),
+                'preference_confidence': 0.75,
+                'adaptation_readiness': True
+            }
+        }
+        
+        return jsonify(personalization_status)
+        
+    except Exception as e:
+        logger.error(f"Error getting personalization status: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/cognitive/meta-analysis/<session_id>')
+def get_meta_cognitive_analysis(session_id: str):
+    """Get meta-cognitive analysis for a session"""
+    try:
+        session = get_cognitive_session(session_id)
+        if not session:
+            return jsonify({'error': 'Session not found'}), 404
+        
+        # Mock meta-cognitive analysis
+        meta_analysis = {
+            'session_id': session_id,
+            'cognitive_strategy_performance': {
+                'current_strategy': 'adaptive',
+                'strategy_effectiveness': 0.82,
+                'strategy_recommendations': [
+                    'Continue with adaptive strategy',
+                    'Consider memory-first approach for complex queries'
+                ]
+            },
+            'error_detection': {
+                'errors_detected': 0,
+                'performance_trends': 'stable',
+                'confidence_trajectory': 'improving'
+            },
+            'self_monitoring_insights': {
+                'processing_efficiency': 0.85,
+                'response_quality_trend': 'improving',
+                'adaptation_success_rate': 0.90
+            }
+        }
+        
+        return jsonify(meta_analysis)
+        
+    except Exception as e:
+        logger.error(f"Error getting meta-cognitive analysis: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/health')
