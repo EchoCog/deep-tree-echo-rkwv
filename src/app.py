@@ -29,6 +29,12 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app, origins="*")
 
+# Serve static files
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    """Serve static files"""
+    return send_from_directory('static', filename)
+
 # Global state
 cognitive_sessions = {}
 system_metrics = {
@@ -1034,6 +1040,41 @@ def health_check():
         'timestamp': datetime.now().isoformat(),
         'active_sessions': len(cognitive_sessions)
     })
+
+@app.route('/api/analytics', methods=['POST'])
+def collect_analytics():
+    """Collect user interaction analytics"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        session_id = data.get('session_id')
+        actions = data.get('actions', [])
+        summary = data.get('summary', {})
+        
+        # Store analytics data (in production, this would go to a database)
+        analytics_data = {
+            'session_id': session_id,
+            'timestamp': datetime.now().isoformat(),
+            'actions': actions,
+            'summary': summary,
+            'user_agent': request.headers.get('User-Agent', ''),
+            'ip_address': request.remote_addr
+        }
+        
+        # For now, just log the analytics (in production, store in database)
+        logger.info(f"Analytics collected for session {session_id}: {len(actions)} actions")
+        
+        # Update system metrics
+        if 'messages_sent' in summary:
+            system_metrics['total_requests'] += summary['messages_sent']
+        
+        return jsonify({'status': 'success', 'actions_processed': len(actions)})
+        
+    except Exception as e:
+        logger.error(f"Error collecting analytics: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/metrics')
 def prometheus_metrics():
