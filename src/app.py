@@ -29,6 +29,12 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app, origins="*")
 
+# Serve static files
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    """Serve static files"""
+    return send_from_directory('static', filename)
+
 # Global state
 cognitive_sessions = {}
 system_metrics = {
@@ -1026,6 +1032,32 @@ def get_meta_cognitive_analysis(session_id: str):
         logger.error(f"Error getting meta-cognitive analysis: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/feedback', methods=['POST'])
+def collect_feedback():
+    """Collect user feedback"""
+    try:
+        data = request.get_json()
+        if not data or 'feedback' not in data:
+            return jsonify({'error': 'No feedback provided'}), 400
+        
+        feedback_data = {
+            'session_id': data.get('session_id'),
+            'feedback': data['feedback'],
+            'timestamp': data.get('timestamp', datetime.now().isoformat()),
+            'page': data.get('page', 'unknown'),
+            'user_agent': request.headers.get('User-Agent', ''),
+            'ip_address': request.remote_addr
+        }
+        
+        # In production, this would be stored in a database
+        logger.info(f"User feedback collected: {feedback_data['feedback'][:50]}...")
+        
+        return jsonify({'status': 'success', 'message': 'Feedback received'})
+        
+    except Exception as e:
+        logger.error(f"Error collecting feedback: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/health')
 def health_check():
     """Health check endpoint"""
@@ -1034,6 +1066,41 @@ def health_check():
         'timestamp': datetime.now().isoformat(),
         'active_sessions': len(cognitive_sessions)
     })
+
+@app.route('/api/analytics', methods=['POST'])
+def collect_analytics():
+    """Collect user interaction analytics"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        session_id = data.get('session_id')
+        actions = data.get('actions', [])
+        summary = data.get('summary', {})
+        
+        # Store analytics data (in production, this would go to a database)
+        analytics_data = {
+            'session_id': session_id,
+            'timestamp': datetime.now().isoformat(),
+            'actions': actions,
+            'summary': summary,
+            'user_agent': request.headers.get('User-Agent', ''),
+            'ip_address': request.remote_addr
+        }
+        
+        # For now, just log the analytics (in production, store in database)
+        logger.info(f"Analytics collected for session {session_id}: {len(actions)} actions")
+        
+        # Update system metrics
+        if 'messages_sent' in summary:
+            system_metrics['total_requests'] += summary['messages_sent']
+        
+        return jsonify({'status': 'success', 'actions_processed': len(actions)})
+        
+    except Exception as e:
+        logger.error(f"Error collecting analytics: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/metrics')
 def prometheus_metrics():
