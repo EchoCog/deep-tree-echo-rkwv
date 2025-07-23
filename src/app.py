@@ -1032,6 +1032,32 @@ def get_meta_cognitive_analysis(session_id: str):
         logger.error(f"Error getting meta-cognitive analysis: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/feedback', methods=['POST'])
+def collect_feedback():
+    """Collect user feedback"""
+    try:
+        data = request.get_json()
+        if not data or 'feedback' not in data:
+            return jsonify({'error': 'No feedback provided'}), 400
+        
+        feedback_data = {
+            'session_id': data.get('session_id'),
+            'feedback': data['feedback'],
+            'timestamp': data.get('timestamp', datetime.now().isoformat()),
+            'page': data.get('page', 'unknown'),
+            'user_agent': request.headers.get('User-Agent', ''),
+            'ip_address': request.remote_addr
+        }
+        
+        # In production, this would be stored in a database
+        logger.info(f"User feedback collected: {feedback_data['feedback'][:50]}...")
+        
+        return jsonify({'status': 'success', 'message': 'Feedback received'})
+        
+    except Exception as e:
+        logger.error(f"Error collecting feedback: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/health')
 def health_check():
     """Health check endpoint"""
