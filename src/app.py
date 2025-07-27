@@ -21,6 +21,23 @@ from persistent_memory import PersistentMemorySystem, MemoryQuery
 from echo_rwkv_bridge import EchoRWKVIntegrationEngine, CognitiveContext
 from auth_middleware import init_auth_middleware, require_auth
 
+# Import Phase 2 Advanced Cognitive Processing Components
+from cognitive_reflection import (
+    MetaCognitiveReflectionSystem, CognitiveStrategy, ProcessingError, 
+    CognitiveMetrics, MetaCognitiveMonitor
+)
+from reasoning_chains import (
+    ComplexReasoningSystem, ReasoningType, DeductiveReasoning,
+    InductiveReasoning, AbductiveReasoning
+)
+from adaptive_learning import (
+    AdaptiveLearningSystem, PersonalizationEngine, ResponseStyleLearner,
+    CognitiveStrategyLearner, UserPreference, FeedbackEntry
+)
+
+# Import Enhanced Cognitive Integration
+from enhanced_cognitive_integration import EnhancedCognitiveProcessor
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -55,6 +72,12 @@ system_metrics = {
 
 # Initialize persistent memory system
 persistent_memory = None
+
+# Phase 2: Initialize Advanced Cognitive Processing Systems
+meta_cognitive_system = None
+complex_reasoning_system = None
+adaptive_learning_system = None
+enhanced_cognitive_processor = None
 
 # Configuration
 CONFIG = {
@@ -113,6 +136,18 @@ if CONFIG['enable_persistence']:
     except Exception as e:
         logger.error(f"Failed to initialize persistent memory: {e}")
         CONFIG['enable_persistence'] = False
+
+# Initialize Phase 2 Advanced Cognitive Processing Systems
+if CONFIG['enable_advanced_cognitive']:
+    try:
+        meta_cognitive_system = MetaCognitiveReflectionSystem()
+        complex_reasoning_system = ComplexReasoningSystem()
+        adaptive_learning_system = AdaptiveLearningSystem()
+        enhanced_cognitive_processor = EnhancedCognitiveProcessor(persistent_memory)
+        logger.info("Phase 2 Advanced Cognitive Processing Systems initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize advanced cognitive systems: {e}")
+        CONFIG['enable_advanced_cognitive'] = False
 
 # Initialize Echo-RWKV engine asynchronously
 def init_echo_rwkv():
@@ -891,7 +926,12 @@ async def process_cognitive_input():
             return jsonify({'error': 'Session not found'}), 404
         
         # Use enhanced processing if available
-        if hasattr(session, 'process_input_enhanced'):
+        if enhanced_cognitive_processor and CONFIG['enable_advanced_cognitive']:
+            result = run_async_task(enhanced_cognitive_processor.process_input_enhanced(
+                input_text, session_id, session.conversation_history, 
+                session.memory_state, session.process_input
+            ))
+        elif hasattr(session, 'process_input_enhanced'):
             result = await session.process_input_enhanced(input_text)
         else:
             result = session.process_input(input_text)
