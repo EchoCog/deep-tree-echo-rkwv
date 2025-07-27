@@ -14,7 +14,36 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Tuple, Union
 from dataclasses import dataclass, asdict
 from abc import ABC, abstractmethod
-import numpy as np
+try:
+    import numpy as np
+    NUMPY_AVAILABLE = True
+except ImportError:
+    NUMPY_AVAILABLE = False
+    # Create a simple fallback for numpy functionality
+    class np:
+        @staticmethod
+        def array(data, dtype=None):
+            return data
+        
+        @staticmethod
+        def dot(a, b):
+            if isinstance(a, list) and isinstance(b, list):
+                return sum(x * y for x, y in zip(a, b))
+            return 0
+        
+        @staticmethod
+        def linalg():
+            pass
+        
+        class linalg:
+            @staticmethod
+            def norm(x):
+                if isinstance(x, list):
+                    return sum(val ** 2 for val in x) ** 0.5
+                return 1.0
+        
+        float32 = float
+
 from pathlib import Path
 import hashlib
 import uuid
@@ -62,12 +91,12 @@ class MemoryEncoder(ABC):
     """Abstract base class for memory encoding"""
     
     @abstractmethod
-    def encode(self, text: str) -> np.ndarray:
+    def encode(self, text: str) -> Union[List[float], Any]:
         """Encode text into vector representation"""
         pass
     
     @abstractmethod
-    def similarity(self, encoding1: np.ndarray, encoding2: np.ndarray) -> float:
+    def similarity(self, encoding1: Union[List[float], Any], encoding2: Union[List[float], Any]) -> float:
         """Calculate similarity between two encodings"""
         pass
 
@@ -77,7 +106,7 @@ class SimpleMemoryEncoder(MemoryEncoder):
     def __init__(self, embedding_dim: int = 256):
         self.embedding_dim = embedding_dim
         
-    def encode(self, text: str) -> np.ndarray:
+    def encode(self, text: str) -> Union[List[float], Any]:
         """Simple encoding based on text features"""
         # Create a simple hash-based encoding
         text_hash = hashlib.md5(text.lower().encode()).hexdigest()
@@ -96,18 +125,73 @@ class SimpleMemoryEncoder(MemoryEncoder):
             len(set(text.lower().split())) / len(text.split()) if text.split() else 0  # Uniqueness
         ])
         
+        # Add semantic features
+        features.extend(self._extract_semantic_features(text))
+        
         # Pad or truncate to desired dimension
         while len(features) < self.embedding_dim:
             features.append(0.0)
         features = features[:self.embedding_dim]
         
+        if NUMPY_AVAILABLE:
+            return np.array(features, dtype=np.float32)
+        else:
+            return features
+            features.append(0.0)
+        features = features[:self.embedding_dim]
+        
         return np.array(features, dtype=np.float32)
     
-    def similarity(self, encoding1: np.ndarray, encoding2: np.ndarray) -> float:
+    def _extract_semantic_features(self, text: str) -> List[float]:
+        """Extract enhanced semantic features"""
+        words = text.lower().split()
+        
+        # Semantic categories
+        question_words = ['what', 'why', 'how', 'when', 'where', 'who', 'which']
+        emotion_words = ['happy', 'sad', 'angry', 'excited', 'worried', 'confused']
+        action_words = ['do', 'make', 'create', 'build', 'solve', 'find', 'learn']
+        cognitive_words = ['think', 'understand', 'know', 'remember', 'analyze']
+        temporal_words = ['before', 'after', 'during', 'while', 'then', 'now']
+        
+        features = []
+        
+        # Semantic category presence
+        features.append(sum(1 for w in words if w in question_words) / max(len(words), 1))
+        features.append(sum(1 for w in words if w in emotion_words) / max(len(words), 1))
+        features.append(sum(1 for w in words if w in action_words) / max(len(words), 1))
+        features.append(sum(1 for w in words if w in cognitive_words) / max(len(words), 1))
+        features.append(sum(1 for w in words if w in temporal_words) / max(len(words), 1))
+        
+        # Syntactic features
+        features.append(text.count(',') / max(len(text), 1))  # Comma density
+        features.append(text.count(';') / max(len(text), 1))  # Semicolon density
+        features.append(text.count(':') / max(len(text), 1))  # Colon density
+        
+        # Memory type indicators
+        procedural_indicators = ['how', 'step', 'process', 'method', 'way']
+        episodic_indicators = ['i', 'me', 'my', 'happened', 'experience']
+        declarative_indicators = ['is', 'are', 'fact', 'definition', 'means']
+        
+        features.append(sum(1 for w in words if w in procedural_indicators) / max(len(words), 1))
+        features.append(sum(1 for w in words if w in episodic_indicators) / max(len(words), 1))
+        features.append(sum(1 for w in words if w in declarative_indicators) / max(len(words), 1))
+        
+        return features
+    
+    def similarity(self, encoding1: Union[List[float], Any], encoding2: Union[List[float], Any]) -> float:
         """Calculate cosine similarity"""
-        dot_product = np.dot(encoding1, encoding2)
-        norm1 = np.linalg.norm(encoding1)
-        norm2 = np.linalg.norm(encoding2)
+        if NUMPY_AVAILABLE and hasattr(encoding1, 'shape'):
+            dot_product = np.dot(encoding1, encoding2)
+            norm1 = np.linalg.norm(encoding1)
+            norm2 = np.linalg.norm(encoding2)
+        else:
+            # Fallback for non-numpy
+            if isinstance(encoding1, list) and isinstance(encoding2, list):
+                dot_product = sum(a * b for a, b in zip(encoding1, encoding2))
+                norm1 = sum(a * a for a in encoding1) ** 0.5
+                norm2 = sum(b * b for b in encoding2) ** 0.5
+            else:
+                return 0.0
         
         if norm1 == 0 or norm2 == 0:
             return 0.0
@@ -469,6 +553,68 @@ class PersistentMemorySystem:
         
         logger.debug(f"Memory search for '{query_text}' returned {len(final_results)} results")
         return final_results
+    
+    def _calculate_relevance_score(self, memory: MemoryItem, query_text: str, similarity: float) -> float:
+        """Calculate composite relevance score for memory"""
+        # Base relevance from similarity
+        relevance = similarity * 0.6
+        
+        # Boost for importance
+        relevance += memory.importance * 0.2
+        
+        # Boost for recent access
+        try:
+            last_accessed = datetime.fromisoformat(memory.last_accessed)
+            days_since_access = (datetime.now() - last_accessed).days
+            recency_boost = max(0, (30 - days_since_access) / 30) * 0.1
+            relevance += recency_boost
+        except:
+            pass
+        
+        # Boost for access frequency
+        frequency_boost = min(memory.access_count / 10.0, 0.1)
+        relevance += frequency_boost
+        
+        return min(relevance, 1.0)
+    
+    def _calculate_context_score(self, memory: MemoryItem, query_text: str) -> float:
+        """Calculate contextual relevance score"""
+        score = 0.0
+        
+        # Check for exact word matches
+        memory_words = set(memory.content.lower().split())
+        query_words = set(query_text.lower().split())
+        word_overlap = len(memory_words.intersection(query_words))
+        if len(query_words) > 0:
+            score += (word_overlap / len(query_words)) * 0.5
+        
+        # Check for semantic category matches
+        if self._get_semantic_category(memory.content) == self._get_semantic_category(query_text):
+            score += 0.3
+        
+        # Check memory type appropriateness
+        if self._is_memory_type_appropriate(memory.memory_type, query_text):
+            score += 0.2
+        
+        return min(score, 1.0)
+    
+    def _get_semantic_category(self, text: str) -> str:
+        """Determine semantic category of text"""
+        text_lower = text.lower()
+        
+        if any(word in text_lower for word in ['how', 'step', 'process', 'method']):
+            return 'procedural'
+        elif any(word in text_lower for word in ['i', 'me', 'my', 'happened', 'experience']):
+            return 'episodic'
+        elif any(word in text_lower for word in ['what', 'is', 'define', 'fact']):
+            return 'declarative'
+        else:
+            return 'general'
+    
+    def _is_memory_type_appropriate(self, memory_type: str, query_text: str) -> bool:
+        """Check if memory type is appropriate for query"""
+        query_category = self._get_semantic_category(query_text)
+        return memory_type == query_category or query_category == 'general'
     
     def associate_memories(self, memory_id1: str, memory_id2: str) -> bool:
         """Create association between two memories"""

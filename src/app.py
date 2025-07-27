@@ -1,9 +1,10 @@
 """
-Deep Tree Echo Integrated Application
+Deep Tree Echo Integrated Application - Iteration 2
 Complete cognitive architecture deployment with RWKV integration for WebVM
+Enhanced with real RWKV integration, persistent memory, and security framework
 """
 
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_from_directory, g
 from flask_cors import CORS
 import os
 import json
@@ -17,6 +18,8 @@ from typing import Dict, Any, List, Optional
 import uuid
 from collections import defaultdict
 from persistent_memory import PersistentMemorySystem, MemoryQuery
+from echo_rwkv_bridge import EchoRWKVIntegrationEngine, CognitiveContext
+from auth_middleware import init_auth_middleware, require_auth
 
 # Configure logging
 logging.basicConfig(
@@ -29,11 +32,11 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app, origins="*")
 
-# Serve static files
-@app.route('/static/<path:filename>')
-def serve_static(filename):
-    """Serve static files"""
-    return send_from_directory('static', filename)
+# Initialize authentication middleware
+auth_manager = init_auth_middleware(app)
+
+# Initialize Echo-RWKV Integration Engine
+echo_rwkv_engine = None
 
 # Global state
 cognitive_sessions = {}
@@ -45,7 +48,9 @@ system_metrics = {
     'last_activity': None,
     'distributed_requests': 0,
     'cache_requests': 0,
-    'load_balancer_requests': 0
+    'load_balancer_requests': 0,
+    'rwkv_integration_enabled': False,
+    'advanced_cognitive_enabled': False
 }
 
 # Initialize persistent memory system
@@ -59,12 +64,45 @@ CONFIG = {
     'session_timeout_minutes': 30,
     'enable_persistence': True,
     'data_dir': '/tmp/echo_data',
+    'enable_real_rwkv': os.environ.get('ENABLE_REAL_RWKV', 'false').lower() == 'true',
+    'enable_advanced_cognitive': os.environ.get('ENABLE_ADVANCED_COGNITIVE', 'true').lower() == 'true',
     # Distributed architecture configuration
     'enable_distributed_mode': os.environ.get('ENABLE_DISTRIBUTED_MODE', 'false').lower() == 'true',
     'load_balancer_url': os.environ.get('LOAD_BALANCER_URL', 'http://localhost:8000'),
     'cache_service_url': os.environ.get('CACHE_SERVICE_URL', 'http://localhost:8002'),
     'redis_url': os.environ.get('REDIS_URL', 'redis://localhost:6379'),
 }
+
+async def initialize_echo_rwkv_engine():
+    """Initialize the Echo-RWKV integration engine"""
+    global echo_rwkv_engine, system_metrics
+    
+    try:
+        echo_rwkv_engine = EchoRWKVIntegrationEngine(
+            use_real_rwkv=CONFIG['enable_real_rwkv'],
+            persistent_memory=persistent_memory
+        )
+        
+        # Initialize with configuration
+        config = {
+            'rwkv': {
+                'model_path': os.environ.get('RWKV_MODEL_PATH', 'RWKV-4-Raven-1B5-v12-Eng98%-Other2%-20230520-ctx4096.pth'),
+                'webvm_mode': CONFIG['webvm_mode'],
+                'memory_limit_mb': CONFIG['memory_limit_mb']
+            },
+            'enable_advanced_cognitive': CONFIG['enable_advanced_cognitive']
+        }
+        
+        success = await echo_rwkv_engine.initialize(config)
+        if success:
+            system_metrics['rwkv_integration_enabled'] = True
+            system_metrics['advanced_cognitive_enabled'] = CONFIG['enable_advanced_cognitive']
+            logger.info("Echo-RWKV integration engine initialized successfully")
+        else:
+            logger.error("Failed to initialize Echo-RWKV integration engine")
+            
+    except Exception as e:
+        logger.error(f"Error initializing Echo-RWKV engine: {e}")
 
 # Ensure data directory exists and initialize persistent memory
 os.makedirs(CONFIG['data_dir'], exist_ok=True)
@@ -76,8 +114,198 @@ if CONFIG['enable_persistence']:
         logger.error(f"Failed to initialize persistent memory: {e}")
         CONFIG['enable_persistence'] = False
 
-class MockCognitiveSession:
-    """Mock cognitive session for demonstration without full RWKV"""
+# Initialize Echo-RWKV engine asynchronously
+def init_echo_rwkv():
+    """Initialize Echo-RWKV in background"""
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(initialize_echo_rwkv_engine())
+    except Exception as e:
+        logger.error(f"Error in background initialization: {e}")
+
+# Start initialization in background thread
+init_thread = threading.Thread(target=init_echo_rwkv, daemon=True)
+init_thread.start()
+
+class EnhancedCognitiveSession:
+    """Enhanced cognitive session with RWKV integration and advanced capabilities"""
+    
+    def __init__(self, session_id: str):
+        self.session_id = session_id
+        self.created_at = datetime.now()
+        self.last_activity = datetime.now()
+        self.memory_state = {
+            'declarative': {},
+            'procedural': {},
+            'episodic': [],
+            'intentional': {'goals': []}
+        }
+        self.conversation_history = []
+        self.processing_stats = {
+            'total_inputs': 0,
+            'avg_processing_time': 0.0,
+            'memory_usage_mb': 0,
+            'rwkv_calls': 0,
+            'advanced_features_used': 0
+        }
+        self.user_preferences = {
+            'response_style': 'balanced',
+            'detail_level': 'moderate',
+            'reasoning_preference': 'adaptive'
+        }
+        
+        # Import helper methods
+        from enhanced_cognitive_methods import EnhancedCognitiveSessionMethods
+        for method_name in dir(EnhancedCognitiveSessionMethods):
+            if not method_name.startswith('__'):
+                method = getattr(EnhancedCognitiveSessionMethods, method_name)
+                setattr(self, method_name, method.__get__(self, self.__class__))
+    
+    async def process_input_enhanced(self, input_text: str) -> Dict[str, Any]:
+        """Process cognitive input with enhanced RWKV integration"""
+        start_time = time.time()
+        self.last_activity = datetime.now()
+        self.processing_stats['total_inputs'] += 1
+        
+        try:
+            if echo_rwkv_engine and echo_rwkv_engine.initialized:
+                # Use enhanced Echo-RWKV processing
+                context = CognitiveContext(
+                    session_id=self.session_id,
+                    user_input=input_text,
+                    conversation_history=self.conversation_history,
+                    memory_state=self.memory_state,
+                    processing_goals=['understand', 'respond', 'learn'],
+                    temporal_context=[],
+                    metadata={'user_preferences': self.user_preferences}
+                )
+                
+                response = await echo_rwkv_engine.process_cognitive_input(context)
+                self.processing_stats['rwkv_calls'] += 1
+                
+                if response.cognitive_state_changes:
+                    self.memory_state.update(response.cognitive_state_changes)
+                
+                processing_time = time.time() - start_time
+                
+                # Create enhanced conversation entry
+                conversation_entry = {
+                    'timestamp': datetime.now().isoformat(),
+                    'input': input_text,
+                    'response': response.integrated_output,
+                    'processing_time': processing_time,
+                    'membrane_outputs': {
+                        'memory': response.memory_response.output_text,
+                        'reasoning': response.reasoning_response.output_text,
+                        'grammar': response.grammar_response.output_text
+                    },
+                    'cognitive_metadata': {
+                        'confidence_score': response.confidence_score,
+                        'rwkv_enhanced': True,
+                        'advanced_processing': system_metrics['advanced_cognitive_enabled']
+                    },
+                    'performance_metrics': {
+                        'memory_processing_time': response.memory_response.processing_time,
+                        'reasoning_processing_time': response.reasoning_response.processing_time,
+                        'grammar_processing_time': response.grammar_response.processing_time,
+                        'total_processing_time': response.total_processing_time
+                    }
+                }
+                
+                self.conversation_history.append(conversation_entry)
+                
+                # Update processing statistics
+                self.processing_stats['avg_processing_time'] = (
+                    (self.processing_stats['avg_processing_time'] * (self.processing_stats['total_inputs'] - 1) + processing_time) /
+                    self.processing_stats['total_inputs']
+                )
+                
+                return conversation_entry
+                
+            else:
+                # Fallback to enhanced processing if Echo-RWKV not available
+                return self.process_input(input_text)
+                
+        except Exception as e:
+            logger.error(f"Error in enhanced processing: {e}")
+            return self.process_input(input_text)
+    
+    def process_input(self, input_text: str) -> Dict[str, Any]:
+        """Enhanced fallback processing"""
+        start_time = time.time()
+        self.last_activity = datetime.now()
+        self.processing_stats['total_inputs'] += 1
+        
+        # Enhanced membrane processing
+        memory_response = self._process_memory_membrane(input_text)
+        reasoning_response = self._process_reasoning_membrane(input_text)
+        grammar_response = self._process_grammar_membrane(input_text)
+        
+        # Advanced integration
+        integrated_response = self._integrate_responses_advanced(
+            memory_response, reasoning_response, grammar_response, input_text
+        )
+        
+        processing_time = time.time() - start_time
+        self.processing_stats['avg_processing_time'] = (
+            (self.processing_stats['avg_processing_time'] * (self.processing_stats['total_inputs'] - 1) + processing_time) /
+            self.processing_stats['total_inputs']
+        )
+        
+        # Store in conversation history with advanced metadata
+        conversation_entry = {
+            'timestamp': datetime.now().isoformat(),
+            'input': input_text,
+            'response': integrated_response,
+            'processing_time': processing_time,
+            'membrane_outputs': {
+                'memory': memory_response,
+                'reasoning': reasoning_response,
+                'grammar': grammar_response
+            },
+            'cognitive_metadata': {
+                'complexity_detected': self._assess_input_complexity(input_text),
+                'reasoning_type_suggested': self._suggest_reasoning_type(input_text),
+                'memory_integration_level': self._assess_memory_integration(input_text),
+                'adaptive_learning_opportunities': self._identify_learning_opportunities(input_text),
+                'enhanced_processing': True
+            }
+        }
+        
+        self.conversation_history.append(conversation_entry)
+        
+        # Update episodic memory with enhanced context
+        self.memory_state['episodic'].append({
+            'event': input_text,
+            'response': integrated_response,
+            'timestamp': datetime.now().isoformat(),
+            'cognitive_context': conversation_entry['cognitive_metadata']
+        })
+        
+        return conversation_entry
+    
+    def get_state_summary(self) -> Dict[str, Any]:
+        """Enhanced state summary with new capabilities"""
+        return {
+            'session_id': self.session_id,
+            'created_at': self.created_at.isoformat(),
+            'last_activity': self.last_activity.isoformat(),
+            'memory_items': {
+                'declarative': len(self.memory_state['declarative']),
+                'procedural': len(self.memory_state['procedural']),
+                'episodic': len(self.memory_state['episodic']),
+                'goals': len(self.memory_state['intentional']['goals'])
+            },
+            'conversation_length': len(self.conversation_history),
+            'processing_stats': self.processing_stats,
+            'user_preferences': self.user_preferences,
+            'enhanced_features': {
+                'rwkv_integration': system_metrics['rwkv_integration_enabled'],
+                'persistent_memory': CONFIG['enable_persistence'],
+                'advanced_cognitive': system_metrics['advanced_cognitive_enabled']
+            }
+        }
     
     def __init__(self, session_id: str):
         self.session_id = session_id
@@ -537,16 +765,22 @@ def run_async_task(coro):
         
         return integration_counts
 
+# Serve static files
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    """Serve static files"""
+    return send_from_directory('static', filename)
+
 def create_cognitive_session() -> str:
-    """Create new cognitive session"""
+    """Create new enhanced cognitive session"""
     session_id = str(uuid.uuid4())
-    cognitive_sessions[session_id] = MockCognitiveSession(session_id)
+    cognitive_sessions[session_id] = EnhancedCognitiveSession(session_id)
     system_metrics['total_sessions'] += 1
     system_metrics['active_sessions'] = len(cognitive_sessions)
-    logger.info(f"Created cognitive session: {session_id}")
+    logger.info(f"Created enhanced cognitive session: {session_id}")
     return session_id
 
-def get_cognitive_session(session_id: str) -> Optional[MockCognitiveSession]:
+def get_cognitive_session(session_id: str) -> Optional[EnhancedCognitiveSession]:
     """Get cognitive session by ID"""
     return cognitive_sessions.get(session_id)
 
@@ -613,8 +847,8 @@ def get_session_info(session_id: str):
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/process', methods=['POST'])
-def process_cognitive_input():
-    """Process cognitive input with distributed capabilities"""
+async def process_cognitive_input():
+    """Process cognitive input with enhanced capabilities and optional authentication"""
     try:
         data = request.get_json()
         if not data or 'input' not in data:
@@ -651,12 +885,16 @@ def process_cognitive_input():
                 system_metrics['last_activity'] = datetime.now()
                 return jsonify(distributed_result)
         
-        # Fallback to local processing
+        # Process with enhanced cognitive session
         session = get_cognitive_session(session_id)
         if not session:
             return jsonify({'error': 'Session not found'}), 404
         
-        result = session.process_input(input_text)
+        # Use enhanced processing if available
+        if hasattr(session, 'process_input_enhanced'):
+            result = await session.process_input_enhanced(input_text)
+        else:
+            result = session.process_input(input_text)
         
         # Cache the result if distributed mode is enabled
         if CONFIG['enable_distributed_mode']:
@@ -667,6 +905,7 @@ def process_cognitive_input():
         system_metrics['last_activity'] = datetime.now()
         
         return jsonify(result)
+        
     except Exception as e:
         logger.error(f"Error processing input: {e}")
         return jsonify({'error': str(e)}), 500
