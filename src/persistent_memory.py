@@ -96,12 +96,51 @@ class SimpleMemoryEncoder(MemoryEncoder):
             len(set(text.lower().split())) / len(text.split()) if text.split() else 0  # Uniqueness
         ])
         
+        # Add semantic features
+        features.extend(self._extract_semantic_features(text))
+        
         # Pad or truncate to desired dimension
         while len(features) < self.embedding_dim:
             features.append(0.0)
         features = features[:self.embedding_dim]
         
         return np.array(features, dtype=np.float32)
+    
+    def _extract_semantic_features(self, text: str) -> List[float]:
+        """Extract enhanced semantic features"""
+        words = text.lower().split()
+        
+        # Semantic categories
+        question_words = ['what', 'why', 'how', 'when', 'where', 'who', 'which']
+        emotion_words = ['happy', 'sad', 'angry', 'excited', 'worried', 'confused']
+        action_words = ['do', 'make', 'create', 'build', 'solve', 'find', 'learn']
+        cognitive_words = ['think', 'understand', 'know', 'remember', 'analyze']
+        temporal_words = ['before', 'after', 'during', 'while', 'then', 'now']
+        
+        features = []
+        
+        # Semantic category presence
+        features.append(sum(1 for w in words if w in question_words) / max(len(words), 1))
+        features.append(sum(1 for w in words if w in emotion_words) / max(len(words), 1))
+        features.append(sum(1 for w in words if w in action_words) / max(len(words), 1))
+        features.append(sum(1 for w in words if w in cognitive_words) / max(len(words), 1))
+        features.append(sum(1 for w in words if w in temporal_words) / max(len(words), 1))
+        
+        # Syntactic features
+        features.append(text.count(',') / max(len(text), 1))  # Comma density
+        features.append(text.count(';') / max(len(text), 1))  # Semicolon density
+        features.append(text.count(':') / max(len(text), 1))  # Colon density
+        
+        # Memory type indicators
+        procedural_indicators = ['how', 'step', 'process', 'method', 'way']
+        episodic_indicators = ['i', 'me', 'my', 'happened', 'experience']
+        declarative_indicators = ['is', 'are', 'fact', 'definition', 'means']
+        
+        features.append(sum(1 for w in words if w in procedural_indicators) / max(len(words), 1))
+        features.append(sum(1 for w in words if w in episodic_indicators) / max(len(words), 1))
+        features.append(sum(1 for w in words if w in declarative_indicators) / max(len(words), 1))
+        
+        return features
     
     def similarity(self, encoding1: np.ndarray, encoding2: np.ndarray) -> float:
         """Calculate cosine similarity"""
@@ -469,6 +508,68 @@ class PersistentMemorySystem:
         
         logger.debug(f"Memory search for '{query_text}' returned {len(final_results)} results")
         return final_results
+    
+    def _calculate_relevance_score(self, memory: MemoryItem, query_text: str, similarity: float) -> float:
+        """Calculate composite relevance score for memory"""
+        # Base relevance from similarity
+        relevance = similarity * 0.6
+        
+        # Boost for importance
+        relevance += memory.importance * 0.2
+        
+        # Boost for recent access
+        try:
+            last_accessed = datetime.fromisoformat(memory.last_accessed)
+            days_since_access = (datetime.now() - last_accessed).days
+            recency_boost = max(0, (30 - days_since_access) / 30) * 0.1
+            relevance += recency_boost
+        except:
+            pass
+        
+        # Boost for access frequency
+        frequency_boost = min(memory.access_count / 10.0, 0.1)
+        relevance += frequency_boost
+        
+        return min(relevance, 1.0)
+    
+    def _calculate_context_score(self, memory: MemoryItem, query_text: str) -> float:
+        """Calculate contextual relevance score"""
+        score = 0.0
+        
+        # Check for exact word matches
+        memory_words = set(memory.content.lower().split())
+        query_words = set(query_text.lower().split())
+        word_overlap = len(memory_words.intersection(query_words))
+        if len(query_words) > 0:
+            score += (word_overlap / len(query_words)) * 0.5
+        
+        # Check for semantic category matches
+        if self._get_semantic_category(memory.content) == self._get_semantic_category(query_text):
+            score += 0.3
+        
+        # Check memory type appropriateness
+        if self._is_memory_type_appropriate(memory.memory_type, query_text):
+            score += 0.2
+        
+        return min(score, 1.0)
+    
+    def _get_semantic_category(self, text: str) -> str:
+        """Determine semantic category of text"""
+        text_lower = text.lower()
+        
+        if any(word in text_lower for word in ['how', 'step', 'process', 'method']):
+            return 'procedural'
+        elif any(word in text_lower for word in ['i', 'me', 'my', 'happened', 'experience']):
+            return 'episodic'
+        elif any(word in text_lower for word in ['what', 'is', 'define', 'fact']):
+            return 'declarative'
+        else:
+            return 'general'
+    
+    def _is_memory_type_appropriate(self, memory_type: str, query_text: str) -> bool:
+        """Check if memory type is appropriate for query"""
+        query_category = self._get_semantic_category(query_text)
+        return memory_type == query_category or query_category == 'general'
     
     def associate_memories(self, memory_id1: str, memory_id2: str) -> bool:
         """Create association between two memories"""
