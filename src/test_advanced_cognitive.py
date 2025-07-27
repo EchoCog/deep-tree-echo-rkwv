@@ -345,8 +345,9 @@ class TestResponseStyleLearner:
     
     def test_preference_confidence_update(self):
         """Test updating preference confidence"""
-        preference = UserPreference(
-            preference_id='test_pref',
+        # Test positive reinforcement
+        preference_pos = UserPreference(
+            preference_id='test_pref_pos',
             user_id='test_user',
             preference_type='response_style',
             preference_value='concise',
@@ -356,14 +357,25 @@ class TestResponseStyleLearner:
             creation_date=datetime.now().isoformat()
         )
         
-        # Positive reinforcement
-        updated_pref = self.style_learner.update_preference_confidence(preference, 0.9)
-        assert updated_pref.confidence > 0.5
-        assert updated_pref.evidence_count == 2
+        updated_pref_pos = self.style_learner.update_preference_confidence(preference_pos, 0.9)
+        assert updated_pref_pos.confidence > 0.5
+        assert updated_pref_pos.evidence_count == 2
         
-        # Negative reinforcement
-        updated_pref = self.style_learner.update_preference_confidence(preference, 0.1)
-        assert updated_pref.confidence < preference.confidence
+        # Test negative reinforcement with fresh preference object
+        preference_neg = UserPreference(
+            preference_id='test_pref_neg',
+            user_id='test_user',
+            preference_type='response_style',
+            preference_value='concise',
+            confidence=0.5,
+            evidence_count=1,
+            last_reinforced=datetime.now().isoformat(),
+            creation_date=datetime.now().isoformat()
+        )
+        original_confidence = preference_neg.confidence
+        
+        updated_pref_neg = self.style_learner.update_preference_confidence(preference_neg, 0.1)
+        assert updated_pref_neg.confidence < original_confidence
 
 class TestCognitiveStrategyLearner:
     """Test cognitive strategy learning"""
