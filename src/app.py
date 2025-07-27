@@ -882,7 +882,7 @@ def get_session_info(session_id: str):
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/process', methods=['POST'])
-async def process_cognitive_input():
+def process_cognitive_input():
     """Process cognitive input with enhanced capabilities and optional authentication"""
     try:
         data = request.get_json()
@@ -932,7 +932,7 @@ async def process_cognitive_input():
                 session.memory_state, session.process_input
             ))
         elif hasattr(session, 'process_input_enhanced'):
-            result = await session.process_input_enhanced(input_text)
+            result = run_async_task(session.process_input_enhanced(input_text))
         else:
             result = session.process_input(input_text)
         
