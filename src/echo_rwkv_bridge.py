@@ -11,11 +11,25 @@ import asyncio
 from typing import Dict, Any, List, Optional, Tuple, Union
 from dataclasses import dataclass, asdict
 from abc import ABC, abstractmethod
-import numpy as np
+try:
+    import numpy as np
+    NUMPY_AVAILABLE = True
+except ImportError:
+    NUMPY_AVAILABLE = False
+    # Simple fallback
+    class np:
+        @staticmethod
+        def array(data):
+            return data
+
 from datetime import datetime
 import threading
 import queue
-from persistent_memory import PersistentMemorySystem
+try:
+    from persistent_memory import PersistentMemorySystem
+except ImportError:
+    # Handle case where persistent_memory is not available
+    PersistentMemorySystem = None
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -68,7 +82,7 @@ class RWKVModelInterface(ABC):
         pass
     
     @abstractmethod
-    async def encode_memory(self, memory_item: Dict[str, Any]) -> np.ndarray:
+    async def encode_memory(self, memory_item: Dict[str, Any]) -> Union[List[float], Any]:
         """Encode memory item for storage"""
         pass
     
@@ -255,11 +269,17 @@ class MockRWKVInterface(RWKVModelInterface):
         else:
             return f"Processing '{prompt}' through integrated cognitive architecture with RWKV-enhanced understanding."
     
-    async def encode_memory(self, memory_item: Dict[str, Any]) -> np.ndarray:
+    async def encode_memory(self, memory_item: Dict[str, Any]) -> Union[List[float], Any]:
         """Mock memory encoding"""
         # Simple hash-based encoding
         text = str(memory_item.get('content', ''))
-        encoding = np.random.rand(512)  # Mock 512-dimensional encoding
+        if NUMPY_AVAILABLE:
+            encoding = np.random.rand(512)  # Mock 512-dimensional encoding
+        else:
+            # Simple fallback encoding
+            encoding = [hash(text[i:i+10]) % 1000 / 1000.0 for i in range(0, min(len(text), 512), 10)]
+            while len(encoding) < 512:
+                encoding.append(0.0)
         return encoding
     
     async def retrieve_memories(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
@@ -309,10 +329,15 @@ class RealRWKVInterface(RWKVModelInterface):
         # Real RWKV generation would happen here
         return f"[Real RWKV Response] {prompt}"
     
-    async def encode_memory(self, memory_item: Dict[str, Any]) -> np.ndarray:
+    async def encode_memory(self, memory_item: Dict[str, Any]) -> Union[List[float], Any]:
         """Encode memory using RWKV"""
-        # Real encoding implementation
-        return np.random.rand(768)  # Placeholder
+        # Real encoding implementation placeholder
+        if NUMPY_AVAILABLE:
+            return np.random.rand(768)  # Placeholder
+        else:
+            # Simple fallback
+            content = str(memory_item.get('content', ''))
+            return [hash(content[i:i+10]) % 1000 / 1000.0 for i in range(min(768, len(content)))]
     
     async def retrieve_memories(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
         """Retrieve memories using RWKV"""

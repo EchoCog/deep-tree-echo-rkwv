@@ -14,7 +14,36 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Tuple, Union
 from dataclasses import dataclass, asdict
 from abc import ABC, abstractmethod
-import numpy as np
+try:
+    import numpy as np
+    NUMPY_AVAILABLE = True
+except ImportError:
+    NUMPY_AVAILABLE = False
+    # Create a simple fallback for numpy functionality
+    class np:
+        @staticmethod
+        def array(data, dtype=None):
+            return data
+        
+        @staticmethod
+        def dot(a, b):
+            if isinstance(a, list) and isinstance(b, list):
+                return sum(x * y for x, y in zip(a, b))
+            return 0
+        
+        @staticmethod
+        def linalg():
+            pass
+        
+        class linalg:
+            @staticmethod
+            def norm(x):
+                if isinstance(x, list):
+                    return sum(val ** 2 for val in x) ** 0.5
+                return 1.0
+        
+        float32 = float
+
 from pathlib import Path
 import hashlib
 import uuid
@@ -62,12 +91,12 @@ class MemoryEncoder(ABC):
     """Abstract base class for memory encoding"""
     
     @abstractmethod
-    def encode(self, text: str) -> np.ndarray:
+    def encode(self, text: str) -> Union[List[float], Any]:
         """Encode text into vector representation"""
         pass
     
     @abstractmethod
-    def similarity(self, encoding1: np.ndarray, encoding2: np.ndarray) -> float:
+    def similarity(self, encoding1: Union[List[float], Any], encoding2: Union[List[float], Any]) -> float:
         """Calculate similarity between two encodings"""
         pass
 
@@ -77,7 +106,7 @@ class SimpleMemoryEncoder(MemoryEncoder):
     def __init__(self, embedding_dim: int = 256):
         self.embedding_dim = embedding_dim
         
-    def encode(self, text: str) -> np.ndarray:
+    def encode(self, text: str) -> Union[List[float], Any]:
         """Simple encoding based on text features"""
         # Create a simple hash-based encoding
         text_hash = hashlib.md5(text.lower().encode()).hexdigest()
@@ -101,6 +130,13 @@ class SimpleMemoryEncoder(MemoryEncoder):
         
         # Pad or truncate to desired dimension
         while len(features) < self.embedding_dim:
+            features.append(0.0)
+        features = features[:self.embedding_dim]
+        
+        if NUMPY_AVAILABLE:
+            return np.array(features, dtype=np.float32)
+        else:
+            return features
             features.append(0.0)
         features = features[:self.embedding_dim]
         
@@ -142,11 +178,20 @@ class SimpleMemoryEncoder(MemoryEncoder):
         
         return features
     
-    def similarity(self, encoding1: np.ndarray, encoding2: np.ndarray) -> float:
+    def similarity(self, encoding1: Union[List[float], Any], encoding2: Union[List[float], Any]) -> float:
         """Calculate cosine similarity"""
-        dot_product = np.dot(encoding1, encoding2)
-        norm1 = np.linalg.norm(encoding1)
-        norm2 = np.linalg.norm(encoding2)
+        if NUMPY_AVAILABLE and hasattr(encoding1, 'shape'):
+            dot_product = np.dot(encoding1, encoding2)
+            norm1 = np.linalg.norm(encoding1)
+            norm2 = np.linalg.norm(encoding2)
+        else:
+            # Fallback for non-numpy
+            if isinstance(encoding1, list) and isinstance(encoding2, list):
+                dot_product = sum(a * b for a, b in zip(encoding1, encoding2))
+                norm1 = sum(a * a for a in encoding1) ** 0.5
+                norm2 = sum(b * b for b in encoding2) ** 0.5
+            else:
+                return 0.0
         
         if norm1 == 0 or norm2 == 0:
             return 0.0
