@@ -33,6 +33,7 @@ Deep Tree Echo is a membrane-based cognitive architecture that implements struct
 - ✅ **Auto-Scaling**: Intelligent scaling based on load thresholds (80% up, 30% down)
 - ✅ **Comprehensive Monitoring**: Prometheus metrics, Grafana dashboards, Jaeger tracing
 - ✅ **Performance Optimization**: Sub-50ms response times, 2500+ req/min throughput
+- ✅ **External RWKV Repositories**: Integrated with BlinkDL RWKV repositories
 
 ### Planned Features (Roadmap)
 - ✅ **Real RWKV Models**: Integrated RWKV.cpp with actual RWKV language models
@@ -51,11 +52,12 @@ Deep Tree Echo is a membrane-based cognitive architecture that implements struct
 │   ├── 💭 Memory Membrane (Storage & Retrieval with RWKV.cpp)
 │   ├── ⚡ Reasoning Membrane (Inference & Logic with RWKV.cpp)
 │   └── 🎭 Grammar Membrane (Symbolic Processing with RWKV.cpp)
-├── 🔌 RWKV.cpp Integration Bridge
+├── 🔌 RWKV Integration Bridge
 │   ├── Real RWKV Model Loading & Management
 │   ├── CPU-Optimized Inference (O(n) complexity)
 │   ├── Quantized Models (INT4/INT5/INT8)
-│   └── Python Bindings & C++ Backend
+│   ├── Python Bindings & C++ Backend
+│   └── External Repository Integration
 ├── 🌐 Distributed Architecture Layer
 │   ├── 🔄 Load Balancer (Auto-scaling & Service Discovery)
 │   ├── 💾 Multi-Level Cache (L1/L2/L3 with Compression)
@@ -206,8 +208,12 @@ deep-tree-echo-webvm-rwkv/
 ├── src/                    # Source code
 │   ├── app.py             # Main Flask application
 │   ├── echo_rwkv_bridge.py # RWKV integration bridge
+│   ├── rwkv_cpp_integration.py # RWKV.cpp integration layer
 │   ├── templates/         # HTML templates
 │   └── static/           # CSS, JS, assets
+├── dependencies/           # RWKV.cpp and external repositories
+│   └── rwkv-cpp/         # RWKV.cpp submodule
+├── external/              # External BlinkDL RWKV repositories
 ├── webvm/                 # WebVM deployment configuration
 │   ├── config/           # WebVM-specific configuration
 │   ├── assets/           # WebVM assets and documentation
@@ -276,6 +282,56 @@ python tests/memory_test.py
 - **Concurrent Users**: 1000+ supported
 - **Memory Efficiency**: Optimized model quantization
 - **Cognitive Quality**: Significant improvement over mock
+
+## 🔗 External RWKV Repository Integration
+
+Deep Tree Echo now integrates with external BlinkDL RWKV repositories, providing access to state-of-the-art RWKV models and implementations.
+
+### Integrated Repositories
+
+- **✅ RWKV-LM** - Main RWKV language model with RWKV-7 "Goose"
+- **✅ ChatRWKV** - ChatGPT-like interface powered by RWKV
+- **✅ RWKV-CUDA** - CUDA accelerated RWKV implementation
+- **✅ WorldModel** - Psychohistory project for LLM grounding
+- **✅ RWKV-v2-RNN-Pile** - RWKV-v2 RNN trained on The Pile
+
+### Integration Features
+
+- **Automatic Repository Management**: Seamless cloning and integration
+- **Model Abstraction**: Unified API across different RWKV variants
+- **Cognitive Mapping**: Intelligent routing of tasks to appropriate models
+- **Performance Optimization**: Efficient model loading and caching
+- **Error Handling**: Graceful fallbacks and error recovery
+
+### Quick Start with External Models
+
+```python
+from integrations.enhanced_rwkv_bridge import create_enhanced_rwkv_bridge
+
+# Create enhanced bridge with external repository support
+bridge = create_enhanced_rwkv_bridge()
+
+# Load external models
+bridge.load_external_model("RWKV-LM")
+bridge.load_external_model("ChatRWKV")
+
+# Process with specific models
+result = bridge.process_with_external_model(
+    "Explain quantum computing", 
+    "main_lm"
+)
+```
+
+### Testing External Integration
+
+```bash
+# Run integration tests
+cd src
+python test_external_rwkv_integration.py
+
+# Run integration demo
+python demo_external_rwkv_integration.py
+```
 
 ## 🔧 Configuration
 
