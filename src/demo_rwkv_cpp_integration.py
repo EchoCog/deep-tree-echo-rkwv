@@ -41,8 +41,12 @@ async def demo_rwkv_cpp_integration():
         print("-" * 50)
         
         # Create enhanced configuration
+        # Retrieve model path from environment variable or use default
+        model_path = os.getenv('RWKV_MODEL_PATH', '/models/rwkv-model.bin')
+        logger.info(f"Using model path: {model_path}")
+        
         config = create_enhanced_rwkv_config(
-            model_path='/models/rwkv-model.bin',  # Would be real model path
+            model_path=model_path,  # Dynamically retrieved model path
             backend_preference='auto',  # Auto-select best available backend
             enable_gpu=False,  # CPU mode for WebVM compatibility
             memory_limit_mb=600  # WebVM memory constraint
