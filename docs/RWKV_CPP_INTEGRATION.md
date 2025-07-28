@@ -1,6 +1,22 @@
 # RWKV.cpp Integration with Deep Tree Echo Framework
 
-This document describes the integration of the RWKV.cpp port into the Deep Tree Echo Framework as a Distributed Agentic Cognitive Micro-Kernel Network.
+**Optional Performance Enhancement**: This document describes the advanced RWKV.cpp integration for enhanced performance. The system works perfectly with the standard `pip install rwkv` package - this integration is for users who want maximum performance.
+
+## Quick Start vs. Performance Integration
+
+### Standard Installation (Recommended for most users)
+```bash
+pip install rwkv  # Simple, works immediately
+```
+
+### Performance Integration (This guide)
+The RWKV.cpp integration provides:
+- 2-5x faster inference
+- Lower memory usage with quantization
+- CPU optimization
+- WebVM compatibility
+
+**Both approaches work seamlessly** - the system automatically uses RWKV.cpp when available and falls back to standard RWKV.
 
 ## Overview
 
@@ -51,17 +67,39 @@ The RWKV.cpp integration replaces the mock RWKV implementation in Deep Tree Echo
 
 ## Installation and Setup
 
-### 1. Clone with Submodules
+### Option 1: Standard RWKV (Easiest)
+
+```bash
+# Clone the repository
+git clone https://github.com/EchoCog/deep-tree-echo-rkwv.git
+cd deep-tree-echo-rkwv/src
+
+# Install RWKV and dependencies
+pip install rwkv  # Core RWKV package
+pip install -r requirements.txt
+
+# Run immediately
+python app.py
+```
+
+**✅ System works perfectly** with this simple installation!
+
+### Option 2: RWKV.cpp Performance Integration
+
+For users who want maximum performance, follow these additional steps:
+
+### 1. Clone with Submodules (for RWKV.cpp)
 
 ```bash
 git clone --recursive https://github.com/EchoCog/deep-tree-echo-rkwv.git
 cd deep-tree-echo-rkwv
 ```
 
-### 2. Install Dependencies
+### 2. Install Dependencies (including RWKV)
 
 ```bash
 cd src
+pip install rwkv  # Core RWKV package (essential)
 pip install -r requirements.txt
 ```
 

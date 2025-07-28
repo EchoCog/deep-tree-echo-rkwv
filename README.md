@@ -75,10 +75,30 @@ Deep Tree Echo is a membrane-based cognitive architecture that implements struct
 
 ### Prerequisites
 - Docker and Docker Compose
-- 4GB+ RAM (8GB recommended for distributed mode)
+- 4GB+ RAM (8GB recommended for distributed mode)  
 - Modern web browser
 
-### Scalable Deployment (Recommended)
+### Fastest Start - Single Instance
+
+1. **Clone and install**
+```bash
+git clone https://github.com/EchoCog/deep-tree-echo-rkwv.git
+cd deep-tree-echo-rkwv/src
+pip install rwkv  # Essential RWKV package
+pip install -r requirements.txt
+```
+
+2. **Run immediately**
+```bash
+python app.py
+```
+
+3. **Access the application**
+Open http://localhost:8000 and start using the cognitive architecture!
+
+**✨ Works out of the box** - The system uses the standard RWKV package and provides full cognitive processing capabilities.
+
+### Advanced: Scalable Deployment (Full Features)
 
 1. **Clone and start the distributed architecture**
 ```bash
@@ -111,10 +131,11 @@ cd deep-tree-echo-webvm-rwkv
 
 ### Single Instance Deployment
 
-1. **Install Python dependencies**
+1. **Quick Install with RWKV**
 ```bash
 cd src
-pip install -r requirements.txt
+pip install rwkv  # Simple RWKV installation
+pip install -r requirements.txt  # All dependencies
 ```
 
 2. **Run the application**
@@ -124,6 +145,8 @@ python app.py
 
 3. **Access the interface**
 Open your browser to `http://localhost:8000`
+
+**Note**: The system works immediately with the standard RWKV package. For enhanced performance, see the [RWKV.cpp Integration Guide](docs/RWKV_CPP_INTEGRATION.md).
 
 ### Docker Deployment
 
