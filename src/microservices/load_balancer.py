@@ -1,6 +1,6 @@
 """
-Load Balancer and Service Registry
-Handles service discovery, load balancing, and auto-scaling
+Enhanced Load Balancer with Phase 3 Observability Integration
+Handles service discovery, load balancing, and auto-scaling with observability
 """
 
 import os
@@ -18,6 +18,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import uvicorn
 import aiohttp
+
+# Phase 3 Observability Integration
+try:
+    from observability.distributed_tracing import initialize_tracer, get_tracer
+    from observability.metrics_collector import initialize_metrics_collector, get_metrics_collector
+    from intelligent_autoscaling import initialize_auto_scaler, get_auto_scaler, ResourceMetrics
+    OBSERVABILITY_AVAILABLE = True
+except ImportError:
+    OBSERVABILITY_AVAILABLE = False
+    logging.warning("Phase 3 observability components not available")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -345,6 +355,36 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Initialize Phase 3 observability components
+if OBSERVABILITY_AVAILABLE:
+    tracer = initialize_tracer("load-balancer")
+    metrics_collector = initialize_metrics_collector("load-balancer")
+    auto_scaler = initialize_auto_scaler({
+        "min_instances": LB_CONFIG.get("min_instances", 1),
+        "max_instances": LB_CONFIG.get("max_instances", 10),
+        "scale_up_threshold": LB_CONFIG.get("scale_up_threshold", 80),
+        "scale_down_threshold": LB_CONFIG.get("scale_down_threshold", 30)
+    })
+    
+    def scale_up_callback(target_instances: int) -> bool:
+        # In a real implementation, this would trigger actual scaling
+        logger.info(f"Scale up triggered: target instances = {target_instances}")
+        return True
+    
+    def scale_down_callback(target_instances: int) -> bool:
+        # In a real implementation, this would trigger actual scaling
+        logger.info(f"Scale down triggered: target instances = {target_instances}")
+        return True
+    
+    auto_scaler.set_scaling_callbacks(scale_up_callback, scale_down_callback)
+    auto_scaler.start_monitoring()
+    
+    logger.info("Phase 3 observability components initialized")
+else:
+    tracer = None
+    metrics_collector = None
+    auto_scaler = None
 
 # API Endpoints
 
