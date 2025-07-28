@@ -186,7 +186,7 @@ class RWKVCppInterface(RWKVModelInterface):
         ]
         
         for path in potential_paths:
-            full_path = os.path.abspath(path)
+            full_path = Path(path).resolve()
             if os.path.exists(full_path):
                 logger.info(f"Auto-detected RWKV library at: {full_path}")
                 return full_path
