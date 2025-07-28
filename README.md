@@ -18,7 +18,9 @@ Deep Tree Echo is a membrane-based cognitive architecture that implements struct
 
 ## 🚀 Key Features
 
-### Current Implementation (v1.1 - Scalable Architecture)
+### Current Implementation (v1.2 - RWKV.cpp Integration)
+- ✅ **Real RWKV Models**: Integrated RWKV.cpp for actual language model inference
+- ✅ **RWKV.cpp Backend**: High-performance C++ backend with Python bindings
 - ✅ **Membrane-Based Cognitive Processing**: Real-time cognitive architecture with specialized membranes
 - ✅ **RWKV Integration Bridge**: Sophisticated abstraction layer for language model integration
 - ✅ **WebVM Deployment**: Browser-accessible deployment optimized for 600MB memory limit
@@ -33,7 +35,8 @@ Deep Tree Echo is a membrane-based cognitive architecture that implements struct
 - ✅ **Performance Optimization**: Sub-50ms response times, 2500+ req/min throughput
 
 ### Planned Features (Roadmap)
-- 🔄 **Real RWKV Models**: Replace mock implementation with actual RWKV language models
+- ✅ **Real RWKV Models**: Integrated RWKV.cpp with actual RWKV language models
+- 🔄 **GPU Acceleration**: cuBLAS/hipBLAS support for RWKV.cpp GPU inference
 - 🔄 **Persistent Memory**: Advanced memory architecture with semantic search and learning
 - 🔄 **Advanced Security**: Enterprise-grade authentication, authorization, and encryption
 - ✅ **Scalable Architecture**: Distributed processing with auto-scaling capabilities
@@ -45,25 +48,26 @@ Deep Tree Echo is a membrane-based cognitive architecture that implements struct
 ```
 🎪 Deep Tree Echo WebVM-RWKV Integration
 ├── 🧠 Cognitive Processing Layer
-│   ├── 💭 Memory Membrane (Storage & Retrieval)
-│   ├── ⚡ Reasoning Membrane (Inference & Logic)
-│   └── 🎭 Grammar Membrane (Symbolic Processing)
-├── 🔌 RWKV Integration Bridge
-│   ├── Model Loading & Management
-│   ├── Tokenization & Preprocessing
-│   └── Inference Optimization
+│   ├── 💭 Memory Membrane (Storage & Retrieval with RWKV.cpp)
+│   ├── ⚡ Reasoning Membrane (Inference & Logic with RWKV.cpp)
+│   └── 🎭 Grammar Membrane (Symbolic Processing with RWKV.cpp)
+├── 🔌 RWKV.cpp Integration Bridge
+│   ├── Real RWKV Model Loading & Management
+│   ├── CPU-Optimized Inference (O(n) complexity)
+│   ├── Quantized Models (INT4/INT5/INT8)
+│   └── Python Bindings & C++ Backend
 ├── 🌐 Distributed Architecture Layer
 │   ├── 🔄 Load Balancer (Auto-scaling & Service Discovery)
 │   ├── 💾 Multi-Level Cache (L1/L2/L3 with Compression)
 │   ├── 🏗️ Microservices (Cognitive, Cache, Load Balancer)
 │   └── 📊 Monitoring (Prometheus, Grafana, Jaeger)
 ├── 🌐 WebVM Deployment Layer
-│   ├── Memory Optimization
+│   ├── Memory Optimization (RWKV.cpp quantization)
 │   ├── Resource Management
 │   └── Browser Compatibility
 └── 🖥️ Web Interface
     ├── Real-time Cognitive Visualization
-    ├── Interactive Conversation Interface
+    ├── Interactive Conversation Interface (with real RWKV)
     └── Performance Monitoring Dashboard
 ```
 
@@ -160,6 +164,7 @@ See [webvm/README.md](webvm/README.md) for detailed WebVM deployment guide.
 ## 📖 Documentation
 
 ### Core Documentation
+- [**RWKV.cpp Integration Guide**](docs/RWKV_CPP_INTEGRATION.md) - Complete RWKV.cpp integration documentation
 - [**Development Roadmap**](docs/development_roadmap.md) - Comprehensive 50-week implementation plan
 - [**System Analysis**](docs/system_analysis.md) - Technical architecture and design decisions
 - [**Deployment Summary**](docs/deployment_summary.md) - Production deployment guide

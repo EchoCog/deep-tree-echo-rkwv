@@ -1,0 +1,3 @@
+[submodule "dependencies/rwkv-cpp"]
+	path = dependencies/rwkv-cpp
+	url = https://github.com/RWKV/rwkv.cpp.git
