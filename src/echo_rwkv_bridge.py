@@ -299,6 +299,65 @@ class RealRWKVInterface(RWKVModelInterface):
             ])
         
         return f"{prompt}{context_info}\n\nResponse:"
+    
+    async def encode_memory(self, memory_item: Dict[str, Any]) -> Union[List[float], Any]:
+        """Encode memory using RWKV.cpp or Python RWKV"""
+        if self.cpp_bridge and self.cpp_context_id is not None:
+            # For now, use simple encoding - could be enhanced with actual RWKV.cpp embeddings
+            content = str(memory_item.get('content', ''))
+            return [hash(content[i:i+10]) % 1000 / 1000.0 for i in range(min(512, len(content)))]
+        else:
+            # Use enhanced mock encoding
+            content = str(memory_item.get('content', ''))
+            encoding = [hash(content[i:i+10]) % 1000 / 1000.0 for i in range(0, min(len(content), 512), 10)]
+            while len(encoding) < 512:
+                encoding.append(0.0)
+            return encoding
+    
+    async def retrieve_memories(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
+        """Retrieve memories using RWKV"""
+        # Return empty for now - could be enhanced with actual memory retrieval
+        return []
+    
+    def get_model_state(self) -> Dict[str, Any]:
+        """Get current model state including rwkv.cpp backend info"""
+        state = {
+            'initialized': self.initialized,
+            'backend': 'unknown',
+            'memory_items': len(self.memory_store),
+            'context_length': len(self.conversation_context)
+        }
+        
+        if self.cpp_bridge and self.cpp_context_id is not None:
+            state.update({
+                'backend': 'rwkv.cpp',
+                'cpp_context_id': self.cpp_context_id,
+                'cpp_bridge_version': self.cpp_bridge.get_version() if self.cpp_bridge else 'unknown'
+            })
+            try:
+                model_info = self.cpp_bridge.get_model_info(self.cpp_context_id)
+                state.update(model_info)
+            except Exception as e:
+                logger.error(f"Error getting rwkv.cpp model info: {e}")
+        elif self.model:
+            state['backend'] = 'python_rwkv'
+        else:
+            state['backend'] = 'enhanced_mock'
+        
+        return state
+    
+    def cleanup(self):
+        """Cleanup RWKV resources"""
+        if self.cpp_bridge and self.cpp_context_id is not None:
+            try:
+                self.cpp_bridge.free_model(self.cpp_context_id)
+                self.cpp_context_id = None
+            except Exception as e:
+                logger.error(f"Error freeing rwkv.cpp model: {e}")
+        
+        self.initialized = False
+        self.model = None
+        self.tokenizer = None
 
 class MockRWKVInterface(RWKVModelInterface):
     """Mock RWKV interface for demonstration"""
@@ -349,63 +408,13 @@ class MockRWKVInterface(RWKVModelInterface):
         return self.memory_store[-top_k:] if self.memory_store else []
     
     def get_model_state(self) -> Dict[str, Any]:
-        """Get current model state including rwkv.cpp backend info"""
-        state = {
+        """Get mock model state"""
+        return {
             'initialized': self.initialized,
-            'backend': 'unknown',
+            'model_type': 'mock_rwkv',
             'memory_items': len(self.memory_store),
             'context_length': len(self.conversation_context)
         }
-        
-        if self.cpp_bridge and self.cpp_context_id is not None:
-            state.update({
-                'backend': 'rwkv.cpp',
-                'cpp_context_id': self.cpp_context_id,
-                'cpp_bridge_version': self.cpp_bridge.get_version() if self.cpp_bridge else 'unknown'
-            })
-            try:
-                model_info = self.cpp_bridge.get_model_info(self.cpp_context_id)
-                state.update(model_info)
-            except Exception as e:
-                logger.error(f"Error getting rwkv.cpp model info: {e}")
-        elif self.model:
-            state['backend'] = 'python_rwkv'
-        else:
-            state['backend'] = 'enhanced_mock'
-        
-        return state
-    
-    def cleanup(self):
-        """Cleanup RWKV resources"""
-        if self.cpp_bridge and self.cpp_context_id is not None:
-            try:
-                self.cpp_bridge.free_model(self.cpp_context_id)
-                self.cpp_context_id = None
-            except Exception as e:
-                logger.error(f"Error freeing rwkv.cpp model: {e}")
-        
-        self.initialized = False
-        self.model = None
-        self.tokenizer = None
-    
-    async def encode_memory(self, memory_item: Dict[str, Any]) -> Union[List[float], Any]:
-        """Encode memory using RWKV.cpp or Python RWKV"""
-        if self.cpp_bridge and self.cpp_context_id is not None:
-            # For now, use simple encoding - could be enhanced with actual RWKV.cpp embeddings
-            content = str(memory_item.get('content', ''))
-            return [hash(content[i:i+10]) % 1000 / 1000.0 for i in range(min(512, len(content)))]
-        else:
-            # Use enhanced mock encoding
-            content = str(memory_item.get('content', ''))
-            encoding = [hash(content[i:i+10]) % 1000 / 1000.0 for i in range(0, min(len(content), 512), 10)]
-            while len(encoding) < 512:
-                encoding.append(0.0)
-            return encoding
-    
-    async def retrieve_memories(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
-        """Retrieve memories using RWKV"""
-        # Return empty for now - could be enhanced with actual memory retrieval
-        return []
 
 class EchoMembraneProcessor:
     """Enhanced membrane processor with RWKV integration and persistent memory"""

@@ -18,8 +18,9 @@ Deep Tree Echo is a membrane-based cognitive architecture that implements struct
 
 ## 🚀 Key Features
 
-### Current Implementation (v1.1 - Scalable Architecture)
+### Current Implementation (v1.1 - Scalable Architecture + RWKV.cpp Integration)
 - ✅ **Membrane-Based Cognitive Processing**: Real-time cognitive architecture with specialized membranes
+- ✅ **RWKV.cpp Integration**: High-performance C++ RWKV inference engine for distributed processing
 - ✅ **RWKV Integration Bridge**: Sophisticated abstraction layer for language model integration
 - ✅ **WebVM Deployment**: Browser-accessible deployment optimized for 600MB memory limit
 - ✅ **Interactive Web Interface**: Real-time conversation with cognitive processing visualization
@@ -31,9 +32,10 @@ Deep Tree Echo is a membrane-based cognitive architecture that implements struct
 - ✅ **Auto-Scaling**: Intelligent scaling based on load thresholds (80% up, 30% down)
 - ✅ **Comprehensive Monitoring**: Prometheus metrics, Grafana dashboards, Jaeger tracing
 - ✅ **Performance Optimization**: Sub-50ms response times, 2500+ req/min throughput
+- ✅ **Distributed Agentic Cognitive Micro-Kernel Network**: Thread-safe, modular cognitive processing
 
 ### Planned Features (Roadmap)
-- ✅ **Real RWKV Models**: Integrated with external BlinkDL RWKV repositories
+- ✅ **Real RWKV Models**: Integrated with external BlinkDL RWKV repositories + high-performance rwkv.cpp
 - 🔄 **Persistent Memory**: Advanced memory architecture with semantic search and learning
 - 🔄 **Advanced Security**: Enterprise-grade authentication, authorization, and encryption
 - ✅ **Scalable Architecture**: Distributed processing with auto-scaling capabilities
@@ -49,6 +51,8 @@ Deep Tree Echo is a membrane-based cognitive architecture that implements struct
 │   ├── ⚡ Reasoning Membrane (Inference & Logic)
 │   └── 🎭 Grammar Membrane (Symbolic Processing)
 ├── 🔌 RWKV Integration Bridge
+│   ├── High-Performance RWKV.cpp Backend
+│   ├── Python RWKV Fallback Support
 │   ├── Model Loading & Management
 │   ├── Tokenization & Preprocessing
 │   ├── External Repository Integration
@@ -57,6 +61,7 @@ Deep Tree Echo is a membrane-based cognitive architecture that implements struct
 │   ├── 🔄 Load Balancer (Auto-scaling & Service Discovery)
 │   ├── 💾 Multi-Level Cache (L1/L2/L3 with Compression)
 │   ├── 🏗️ Microservices (Cognitive, Cache, Load Balancer)
+│   ├── 🧠 Distributed Agentic Cognitive Micro-Kernel Network
 │   └── 📊 Monitoring (Prometheus, Grafana, Jaeger)
 ├── 🌐 WebVM Deployment Layer
 │   ├── Memory Optimization
@@ -250,6 +255,56 @@ python tests/memory_test.py
 - **Concurrent Users**: 1000+ supported
 - **Memory Efficiency**: Optimized model quantization
 - **Cognitive Quality**: Significant improvement over mock
+
+## 🔗 RWKV.cpp Integration
+
+Deep Tree Echo now features a high-performance C++ backend through [rwkv.cpp](https://github.com/RWKV/rwkv.cpp) integration, providing:
+
+### ⚡ High-Performance Features
+- **C++ RWKV Engine**: Direct integration with rwkv.cpp for optimal performance
+- **GGML Backend**: Optimized tensor operations with CPU/GPU support
+- **Quantization Support**: Q4_0, Q4_1, Q5_0, Q5_1, Q8_0 model formats
+- **Thread-Safe Processing**: Concurrent inference for distributed cognitive processing
+- **Memory Optimization**: Efficient model loading and state management
+
+### 🧠 Distributed Agentic Cognitive Micro-Kernel Network
+- **Modular Architecture**: Independent cognitive membranes with shared resources
+- **Fault Tolerance**: Graceful degradation and fallback mechanisms
+- **Scalable Processing**: Multi-context support for parallel user sessions
+- **Resource Isolation**: Secure and efficient resource management
+
+### 🚀 Quick Start with RWKV.cpp
+
+1. **Build the integration**:
+   ```bash
+   ./build_rwkv_cpp.sh
+   ```
+
+2. **Download an RWKV model** (in ggml format):
+   ```bash
+   # Example: Download a quantized model
+   wget https://huggingface.co/BlinkDL/rwkv-4-pile-169m/resolve/main/RWKV-4-Pile-169M-20220807-8023.ggml.bin
+   ```
+
+3. **Use in your application**:
+   ```python
+   from echo_rwkv_bridge import EchoRWKVIntegrationEngine
+   
+   engine = EchoRWKVIntegrationEngine(
+       use_real_rwkv=True, 
+       use_cpp_backend=True
+   )
+   
+   config = {
+       'rwkv': {
+           'model_path': 'path/to/your/model.ggml',
+           'thread_count': 4,
+           'gpu_layers': 0  # Set > 0 for GPU acceleration
+       }
+   }
+   ```
+
+For detailed documentation, see [RWKV_CPP_INTEGRATION.md](RWKV_CPP_INTEGRATION.md).
 
 ## 🔗 External RWKV Repository Integration
 
