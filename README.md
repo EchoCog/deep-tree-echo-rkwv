@@ -33,7 +33,7 @@ Deep Tree Echo is a membrane-based cognitive architecture that implements struct
 - ✅ **Performance Optimization**: Sub-50ms response times, 2500+ req/min throughput
 
 ### Planned Features (Roadmap)
-- 🔄 **Real RWKV Models**: Replace mock implementation with actual RWKV language models
+- ✅ **Real RWKV Models**: Integrated with external BlinkDL RWKV repositories
 - 🔄 **Persistent Memory**: Advanced memory architecture with semantic search and learning
 - 🔄 **Advanced Security**: Enterprise-grade authentication, authorization, and encryption
 - ✅ **Scalable Architecture**: Distributed processing with auto-scaling capabilities
@@ -51,6 +51,7 @@ Deep Tree Echo is a membrane-based cognitive architecture that implements struct
 ├── 🔌 RWKV Integration Bridge
 │   ├── Model Loading & Management
 │   ├── Tokenization & Preprocessing
+│   ├── External Repository Integration
 │   └── Inference Optimization
 ├── 🌐 Distributed Architecture Layer
 │   ├── 🔄 Load Balancer (Auto-scaling & Service Discovery)
@@ -189,6 +190,7 @@ deep-tree-echo-webvm-rwkv/
 ├── config/               # Configuration files
 ├── tests/               # Test suites
 ├── scripts/             # Deployment and utility scripts
+├── external/            # External BlinkDL RWKV repositories
 └── assets/              # Static assets and resources
 ```
 
@@ -248,6 +250,56 @@ python tests/memory_test.py
 - **Concurrent Users**: 1000+ supported
 - **Memory Efficiency**: Optimized model quantization
 - **Cognitive Quality**: Significant improvement over mock
+
+## 🔗 External RWKV Repository Integration
+
+Deep Tree Echo now integrates with external BlinkDL RWKV repositories, providing access to state-of-the-art RWKV models and implementations.
+
+### Integrated Repositories
+
+- **✅ RWKV-LM** - Main RWKV language model with RWKV-7 "Goose"
+- **✅ ChatRWKV** - ChatGPT-like interface powered by RWKV
+- **✅ RWKV-CUDA** - CUDA accelerated RWKV implementation
+- **✅ WorldModel** - Psychohistory project for LLM grounding
+- **✅ RWKV-v2-RNN-Pile** - RWKV-v2 RNN trained on The Pile
+
+### Integration Features
+
+- **Automatic Repository Management**: Seamless cloning and integration
+- **Model Abstraction**: Unified API across different RWKV variants
+- **Cognitive Mapping**: Intelligent routing of tasks to appropriate models
+- **Performance Optimization**: Efficient model loading and caching
+- **Error Handling**: Graceful fallbacks and error recovery
+
+### Quick Start with External Models
+
+```python
+from integrations.enhanced_rwkv_bridge import create_enhanced_rwkv_bridge
+
+# Create enhanced bridge with external repository support
+bridge = create_enhanced_rwkv_bridge()
+
+# Load external models
+bridge.load_external_model("RWKV-LM")
+bridge.load_external_model("ChatRWKV")
+
+# Process with specific models
+result = bridge.process_with_external_model(
+    "Explain quantum computing", 
+    "main_lm"
+)
+```
+
+### Testing External Integration
+
+```bash
+# Run integration tests
+cd src
+python test_external_rwkv_integration.py
+
+# Run integration demo
+python demo_external_rwkv_integration.py
+```
 
 ## 🔧 Configuration
 

@@ -1,0 +1,143 @@
+# BlinkDL RWKV External Repository Configuration
+
+# Repository Integration Settings
+external_repositories:
+  # Core settings
+  enabled: true
+  base_path: "external"
+  auto_scan: true
+  
+  # Repository definitions
+  repositories:
+    RWKV-LM:
+      enabled: true
+      url: "https://github.com/BlinkDL/RWKV-LM.git"
+      type: "RWKV-LM"
+      description: "Main RWKV language model with RWKV-7 'Goose'"
+      issue_ref: "#31"
+      capabilities:
+        - "generation"
+        - "training"
+        - "inference"
+      entry_points:
+        train: "train.py"
+        inference: "src/run.py"
+        model: "src/model.py"
+    
+    ChatRWKV:
+      enabled: true
+      url: "https://github.com/BlinkDL/ChatRWKV.git"
+      type: "ChatRWKV"
+      description: "ChatGPT-like interface powered by RWKV"
+      issue_ref: "#33"
+      capabilities:
+        - "chat"
+        - "conversation"
+        - "web_interface"
+      entry_points:
+        chat: "chat.py"
+        api: "API_DEMO.py"
+        web: "web.py"
+    
+    RWKV-CUDA:
+      enabled: true
+      url: "https://github.com/BlinkDL/RWKV-CUDA.git"
+      type: "RWKV-CUDA"
+      description: "CUDA accelerated RWKV implementation"
+      issue_ref: "#34"
+      requirements:
+        - "torch[cuda]"
+        - "nvidia-cuda-toolkit"
+      capabilities:
+        - "cuda_acceleration"
+        - "fast_inference"
+      entry_points:
+        cuda_kernel: "cuda/wkv_cuda_kernel.cu"
+        ops: "wkv_op.py"
+    
+    WorldModel:
+      enabled: true
+      url: "https://github.com/BlinkDL/WorldModel.git"
+      type: "WorldModel"
+      description: "Psychohistory project for LLM grounding"
+      issue_ref: "#37"
+      capabilities:
+        - "psychohistory"
+        - "world_modeling"
+        - "llm_grounding"
+      entry_points: {}
+    
+    RWKV-v2-RNN-Pile:
+      enabled: true
+      url: "https://github.com/BlinkDL/RWKV-v2-RNN-Pile.git"
+      type: "RWKV-v2-RNN-Pile"
+      description: "RWKV-v2 RNN trained on The Pile dataset"
+      issue_ref: "#38"
+      capabilities:
+        - "pile_trained"
+        - "text_generation"
+        - "rnn_architecture"
+      entry_points:
+        model: "inference.py"
+        chat: "chat.py"
+
+# Integration settings
+integration:
+  # Cognitive architecture integration
+  cognitive_mapping:
+    reasoning: ["RWKV-LM", "ChatRWKV"]
+    memory: ["WorldModel", "RWKV-v2-RNN-Pile"]
+    language: ["ChatRWKV", "RWKV-LM"]
+    analysis: ["WorldModel", "RWKV-LM"]
+  
+  # Performance settings
+  performance:
+    enable_caching: true
+    cache_size: 1000
+    timeout_seconds: 30
+    max_concurrent_models: 4
+  
+  # Security settings
+  security:
+    sandbox_external_code: true
+    allowed_imports:
+      - "torch"
+      - "numpy"
+      - "transformers"
+      - "rwkv"
+    restricted_operations:
+      - "file_write"
+      - "network_access"
+
+# Missing repositories (to be identified)
+missing_repositories:
+  # Issue #32 - TBD
+  - issue: "#32"
+    status: "pending_identification"
+    description: "Repository not specified in issue description"
+  
+  # Issue #35 - RWKV-7 (covered by RWKV-LM)
+  - issue: "#35"
+    status: "covered_by_rwkv_lm"
+    description: "RWKV-7 'Goose' is included in RWKV-LM repository"
+  
+  # Issue #36 - nanoGPT style (not found)
+  - issue: "#36"
+    status: "not_found"
+    description: "RWKV in nanoGPT style repository not found in BlinkDL account"
+
+# Status tracking
+status:
+  last_updated: "2025-07-28"
+  repositories_cloned: 5
+  repositories_available: 5
+  issues_addressed:
+    - "#31"  # RWKV-LM
+    - "#33"  # ChatRWKV
+    - "#34"  # RWKV-CUDA
+    - "#37"  # WorldModel
+    - "#38"  # RWKV-v2-RNN-Pile
+  issues_pending:
+    - "#32"  # TBD
+    - "#35"  # Covered by RWKV-LM
+    - "#36"  # Not found
