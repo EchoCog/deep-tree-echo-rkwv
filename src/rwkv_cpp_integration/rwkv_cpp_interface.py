@@ -445,14 +445,11 @@ class RWKVCppInterface(RWKVModelInterface):
         self.logits = None
         logger.debug("RWKV.cpp model state reset")
     
-    def save_memory(self, memory_item: Dict[str, Any]):
+    async def save_memory(self, memory_item: Dict[str, Any]):
         """Save memory item with encoding for future retrieval"""
         try:
             # Add encoding to memory item for similarity search
-            import asyncio
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            encoding = loop.run_until_complete(self.encode_memory(memory_item))
+            encoding = await self.encode_memory(memory_item)
             
             memory_with_encoding = memory_item.copy()
             memory_with_encoding['encoding'] = encoding
