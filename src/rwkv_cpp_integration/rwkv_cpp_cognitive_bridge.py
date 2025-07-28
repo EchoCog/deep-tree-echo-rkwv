@@ -220,7 +220,7 @@ Memory Response:"""
             if self.enable_caching:
                 self.cognitive_cache[cache_key] = membrane_response
                 # Limit cache size for WebVM constraints
-                if len(self.cognitive_cache) > 100:
+                if len(self.cognitive_cache) > self.cache_size_limit:
                     # Remove oldest entries
                     oldest_keys = list(self.cognitive_cache.keys())[:20]
                     for key in oldest_keys:
