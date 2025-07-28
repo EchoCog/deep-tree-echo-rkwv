@@ -18,11 +18,11 @@ Deep Tree Echo is a membrane-based cognitive architecture that implements struct
 
 ## 🚀 Key Features
 
-### Current Implementation (v1.2 - RWKV.cpp Enhanced Architecture)
+### Current Implementation (v1.2 - Simple RWKV Integration)
 - ✅ **Membrane-Based Cognitive Processing**: Real-time cognitive architecture with specialized membranes
-- ✅ **RWKV.cpp Integration**: High-performance C++ RWKV backend with multi-format support (FP32/16, INT4/5/8)
-- ✅ **Multi-Backend Architecture**: Automatic selection between RWKV.cpp, Python RWKV, and mock backends
-- ✅ **Enhanced Cognitive Bridge**: Advanced membrane processing with C++ acceleration and caching
+- ✅ **Simple RWKV Integration**: Clean integration using `pip install rwkv` package
+- ✅ **Multi-Backend Architecture**: Automatic selection between pip RWKV package and mock backend
+- ✅ **Enhanced Cognitive Bridge**: Advanced membrane processing with automatic fallback
 - ✅ **WebVM Deployment**: Browser-accessible deployment optimized for 600MB memory limit
 - ✅ **Interactive Web Interface**: Real-time conversation with cognitive processing visualization
 - ✅ **Session Management**: Persistent conversations with cognitive state tracking
@@ -35,7 +35,7 @@ Deep Tree Echo is a membrane-based cognitive architecture that implements struct
 - ✅ **Performance Optimization**: Sub-50ms response times, 2500+ req/min throughput
 
 ### Planned Features (Roadmap)
-- ✅ **Real RWKV Models**: Integrated RWKV.cpp high-performance C++ backend
+- ✅ **Simple RWKV Models**: Integrated pip package approach for easy installation
 - 🔄 **GPU Acceleration**: WebGL/WebGPU support for browser-based GPU processing
 - 🔄 **Persistent Memory**: Advanced memory architecture with semantic search and learning
 - 🔄 **Advanced Security**: Enterprise-grade authentication, authorization, and encryption
@@ -79,11 +79,52 @@ Deep Tree Echo is a membrane-based cognitive architecture that implements struct
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Docker and Docker Compose
-- 4GB+ RAM (8GB recommended for distributed mode)
+- Python 3.8+
 - Modern web browser
+- 2GB+ RAM
 
-### Enhanced RWKV.cpp Deployment (Recommended for Production)
+### Simple RWKV Integration (Recommended)
+
+1. **Install RWKV package**
+```bash
+# Install the RWKV package
+pip install rwkv
+
+# Clone the repository
+git clone https://github.com/EchoCog/deep-tree-echo-rkwv.git
+cd deep-tree-echo-rkwv
+```
+
+2. **Install dependencies**
+```bash
+pip install -r src/requirements.txt
+```
+
+3. **Test the integration**
+```bash
+cd src
+
+# Run the simple integration test
+python test_simple_rwkv_integration.py
+
+# Try the interactive demo
+python demo_simple_rwkv.py
+```
+
+4. **Start the cognitive bridge**
+```bash
+# Use the simple RWKV integration in your code
+from simple_rwkv_integration import SimpleEchoCognitiveBridge
+
+bridge = SimpleEchoCognitiveBridge()
+await bridge.initialize()
+```
+
+### Alternative: Docker Deployment
+
+If you prefer Docker or need the full distributed architecture:
+
+### Enhanced RWKV.cpp Deployment (Advanced)
 
 1. **Clone with RWKV.cpp integration**
 ```bash
@@ -147,6 +188,45 @@ cd deep-tree-echo-webvm-rwkv
 
 # Run performance tests
 ./quick-start.sh test
+```
+
+## 💡 Simple Usage Example
+
+```python
+import asyncio
+from simple_rwkv_integration import SimpleEchoCognitiveBridge
+
+async def main():
+    # Initialize the cognitive bridge
+    bridge = SimpleEchoCognitiveBridge()
+    
+    # Configure for your setup
+    config = {
+        'rwkv': {
+            'strategy': 'cpu fp32',  # WebVM compatible
+        }
+    }
+    
+    # Initialize with RWKV (automatically falls back if not installed)
+    await bridge.initialize(config)
+    
+    # Process cognitive queries
+    result = await bridge.process_cognitive_query(
+        "What is the nature of consciousness?",
+        context={'session_id': 'my_session'}
+    )
+    
+    print(f"Response: {result['response']}")
+    print(f"Processing time: {result['processing_time']:.3f}s")
+
+# Run the example
+asyncio.run(main())
+```
+
+**Output:**
+```
+Response: Processing 'What is the nature of consciousness?' through the Deep Tree Echo RWKV integration framework for comprehensive analysis.
+Processing time: 0.301s
 ```
 
 ### Single Instance Deployment
