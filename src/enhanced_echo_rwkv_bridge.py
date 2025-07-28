@@ -535,7 +535,7 @@ def create_enhanced_rwkv_config(
         'rwkv': {
             'model_path': model_path,
             'backend_type': backend_preference,
-            'thread_count': min(4, os.cpu_count() or 4),
+            'thread_count': max(1, int((os.cpu_count() or 4) * thread_percentage)),
             'gpu_layer_count': 10 if enable_gpu else 0,
             'context_length': 2048,
             'temperature': 0.8,
