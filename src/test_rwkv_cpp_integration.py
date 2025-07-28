@@ -28,10 +28,9 @@ def test_rwkv_cpp_library_availability():
     print("=" * 50)
     
     # Check if library file exists
-    library_path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), 
+    library_path = Path(__file__).parent.joinpath(
         '../external/rwkv-cpp/librwkv.so'
-    ))
+    ).resolve()
     
     print(f"Checking library path: {library_path}")
     
