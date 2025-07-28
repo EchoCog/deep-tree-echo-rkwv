@@ -360,16 +360,16 @@ class RWKVCppInterface(RWKVModelInterface):
             if tokens:
                 logits, _ = self.model.eval_sequence_in_chunks(tokens, None, None, None, use_numpy=True)
                 # Use logits as a form of embedding (simplified)
-                embedding = logits[:min(512, len(logits))].tolist()
+                embedding = logits[:min(self.EMBEDDING_SIZE, len(logits))].tolist()
                 return embedding
             else:
-                return [0.0] * 512  # Default embedding
+                return [0.0] * self.EMBEDDING_SIZE  # Default embedding
                 
         except Exception as e:
             logger.error(f"Error encoding memory with RWKV.cpp: {e}")
             # Fallback to simple encoding
             content = str(memory_item.get('content', ''))
-            return [hash(content[i:i+10]) % 1000 / 1000.0 for i in range(min(512, len(content)))]
+            return [hash(content[i:i+10]) % 1000 / 1000.0 for i in range(min(self.EMBEDDING_SIZE, len(content)))]
     
     async def retrieve_memories(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
         """Retrieve relevant memories using RWKV.cpp enhanced similarity search"""
