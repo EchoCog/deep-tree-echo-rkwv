@@ -97,7 +97,7 @@ class RWKVModelInterface(ABC):
         pass
 
 class RealRWKVInterface(RWKVModelInterface):
-    """Real RWKV interface for production use"""
+    """Real RWKV interface using pip install rwkv"""
     
     def __init__(self):
         self.initialized = False
@@ -109,51 +109,57 @@ class RealRWKVInterface(RWKVModelInterface):
         self.model_state = None
         
     async def initialize(self, model_config: Dict[str, Any]) -> bool:
-        """Initialize real RWKV model"""
+        """Initialize real RWKV model using pip package"""
         try:
-            # Import RWKV modules
+            # Import RWKV modules from pip package
             try:
                 from rwkv.model import RWKV
                 from rwkv.utils import PIPELINE
+                logger.info("Successfully imported RWKV from pip package")
             except ImportError:
-                logger.warning("RWKV not available, falling back to enhanced mock")
+                logger.warning("RWKV pip package not available. Install with: pip install rwkv")
                 return await self._initialize_enhanced_mock(model_config)
             
             self.model_config = model_config
             model_path = model_config.get('model_path', 'RWKV-4-Raven-1B5-v12-Eng98%-Other2%-20230520-ctx4096.pth')
             
             # Initialize RWKV model with WebVM memory constraints
+            strategy = 'cpu fp32' if model_config.get('webvm_mode', True) else 'cuda fp16'
+            
+            logger.info(f"Initializing RWKV model: {model_path} with strategy: {strategy}")
+            
             self.model = RWKV(
                 model=model_path,
-                strategy='cpu fp32' if model_config.get('webvm_mode', True) else 'cuda fp16'
+                strategy=strategy
             )
             
             # Initialize pipeline for text processing
-            self.tokenizer = PIPELINE(self.model, "rwkv_vocab_v20230424")
+            vocab_path = model_config.get('vocab_path', "rwkv_vocab_v20230424")
+            self.tokenizer = PIPELINE(self.model, vocab_path)
             
             self.initialized = True
-            logger.info(f"Real RWKV interface initialized with model: {model_path}")
+            logger.info(f"RWKV pip package interface initialized successfully with model: {model_path}")
             return True
             
         except Exception as e:
-            logger.error(f"Failed to initialize real RWKV: {e}")
+            logger.error(f"Failed to initialize RWKV pip package: {e}")
             return await self._initialize_enhanced_mock(model_config)
     
     async def _initialize_enhanced_mock(self, model_config: Dict[str, Any]) -> bool:
-        """Initialize enhanced mock when real RWKV is not available"""
+        """Initialize enhanced mock when RWKV pip package is not available"""
         self.model_config = model_config
         self.initialized = True
-        logger.info("Enhanced mock RWKV interface initialized (real RWKV not available)")
+        logger.info("Enhanced mock RWKV interface initialized (pip install rwkv to use real RWKV)")
         return True
     
     async def generate_response(self, prompt: str, context: CognitiveContext) -> str:
-        """Generate response using real RWKV model or enhanced mock"""
+        """Generate response using RWKV pip package or enhanced mock"""
         if not self.initialized:
             raise RuntimeError("RWKV interface not initialized")
         
         try:
             if self.model and self.tokenizer:
-                # Use real RWKV model
+                # Use real RWKV model from pip package
                 return await self._generate_real_response(prompt, context)
             else:
                 # Use enhanced mock with better cognitive patterns
@@ -163,12 +169,12 @@ class RealRWKVInterface(RWKVModelInterface):
             return f"Processing error: {str(e)}"
     
     async def _generate_real_response(self, prompt: str, context: CognitiveContext) -> str:
-        """Generate response using real RWKV model"""
+        """Generate response using RWKV pip package"""
         try:
             # Prepare context-aware prompt
             full_prompt = self._build_context_prompt(prompt, context)
             
-            # Generate with RWKV
+            # Generate with RWKV using pip package
             output = self.tokenizer.generate(
                 full_prompt,
                 token_count=200,
@@ -183,7 +189,7 @@ class RealRWKVInterface(RWKVModelInterface):
             return response if response else "I understand your input and am processing it through the cognitive architecture."
             
         except Exception as e:
-            logger.error(f"Real RWKV generation error: {e}")
+            logger.error(f"RWKV pip package generation error: {e}")
             return await self._generate_enhanced_mock_response(prompt, context)
     
     async def _generate_enhanced_mock_response(self, prompt: str, context: CognitiveContext) -> str:
@@ -296,61 +302,7 @@ class MockRWKVInterface(RWKVModelInterface):
             'context_length': len(self.conversation_context)
         }
 
-class RealRWKVInterface(RWKVModelInterface):
-    """Real RWKV interface (placeholder for actual implementation)"""
-    
-    def __init__(self):
-        self.model = None
-        self.tokenizer = None
-        self.initialized = False
-    
-    async def initialize(self, model_config: Dict[str, Any]) -> bool:
-        """Initialize real RWKV model"""
-        try:
-            # This would load actual RWKV model
-            # from rwkv.model import RWKV
-            # from rwkv.utils import PIPELINE
-            # 
-            # self.model = RWKV(model=model_config['model_path'])
-            # self.tokenizer = PIPELINE(self.model, model_config['vocab_path'])
-            
-            logger.info("Real RWKV interface would be initialized here")
-            self.initialized = True
-            return True
-        except Exception as e:
-            logger.error(f"Failed to initialize RWKV model: {e}")
-            return False
-    
-    async def generate_response(self, prompt: str, context: CognitiveContext) -> str:
-        """Generate response using real RWKV model"""
-        if not self.initialized:
-            return "RWKV model not initialized"
-        
-        # Real RWKV generation would happen here
-        return f"[Real RWKV Response] {prompt}"
-    
-    async def encode_memory(self, memory_item: Dict[str, Any]) -> Union[List[float], Any]:
-        """Encode memory using RWKV"""
-        # Real encoding implementation placeholder
-        if NUMPY_AVAILABLE:
-            return np.random.rand(768)  # Placeholder
-        else:
-            # Simple fallback
-            content = str(memory_item.get('content', ''))
-            return [hash(content[i:i+10]) % 1000 / 1000.0 for i in range(min(768, len(content)))]
-    
-    async def retrieve_memories(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
-        """Retrieve memories using RWKV"""
-        # Real retrieval implementation
-        return []
-    
-    def get_model_state(self) -> Dict[str, Any]:
-        """Get real model state"""
-        return {
-            'initialized': self.initialized,
-            'model_type': 'rwkv',
-            'model_loaded': self.model is not None
-        }
+
 
 class EchoMembraneProcessor:
     """Enhanced membrane processor with RWKV integration and persistent memory"""
