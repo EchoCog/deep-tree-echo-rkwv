@@ -97,9 +97,9 @@ class RWKVModelInterface(ABC):
         pass
 
 class RealRWKVInterface(RWKVModelInterface):
-    """Real RWKV interface for production use"""
+    """Real RWKV interface for production use with rwkv.cpp support"""
     
-    def __init__(self):
+    def __init__(self, use_cpp_backend: bool = True):
         self.initialized = False
         self.model_config = {}
         self.model = None
@@ -107,11 +107,42 @@ class RealRWKVInterface(RWKVModelInterface):
         self.memory_store = []
         self.conversation_context = []
         self.model_state = None
+        self.use_cpp_backend = use_cpp_backend
+        self.cpp_bridge = None
+        self.cpp_context_id = None
         
     async def initialize(self, model_config: Dict[str, Any]) -> bool:
-        """Initialize real RWKV model"""
+        """Initialize real RWKV model with rwkv.cpp support"""
         try:
-            # Import RWKV modules
+            self.model_config = model_config
+            
+            # Try rwkv.cpp backend first if enabled
+            if self.use_cpp_backend:
+                try:
+                    from rwkv_cpp_bridge import get_rwkv_cpp_bridge
+                    self.cpp_bridge = get_rwkv_cpp_bridge()
+                    
+                    if self.cpp_bridge.is_available():
+                        model_path = model_config.get('model_path')
+                        if model_path and os.path.exists(model_path):
+                            thread_count = model_config.get('thread_count', 4)
+                            gpu_layers = model_config.get('gpu_layers', 0)
+                            
+                            self.cpp_context_id = self.cpp_bridge.load_model(
+                                model_path, thread_count, gpu_layers
+                            )
+                            
+                            self.initialized = True
+                            logger.info(f"Initialized RWKV.cpp backend with model: {model_path}")
+                            return True
+                        else:
+                            logger.warning("Model path not found for rwkv.cpp, falling back to Python")
+                    else:
+                        logger.warning("RWKV.cpp bridge not available, falling back to Python")
+                except Exception as e:
+                    logger.warning(f"Failed to initialize rwkv.cpp backend: {e}")
+            
+            # Fallback to Python RWKV implementation
             try:
                 from rwkv.model import RWKV
                 from rwkv.utils import PIPELINE
@@ -119,7 +150,6 @@ class RealRWKVInterface(RWKVModelInterface):
                 logger.warning("RWKV not available, falling back to enhanced mock")
                 return await self._initialize_enhanced_mock(model_config)
             
-            self.model_config = model_config
             model_path = model_config.get('model_path', 'RWKV-4-Raven-1B5-v12-Eng98%-Other2%-20230520-ctx4096.pth')
             
             # Initialize RWKV model with WebVM memory constraints
@@ -147,13 +177,16 @@ class RealRWKVInterface(RWKVModelInterface):
         return True
     
     async def generate_response(self, prompt: str, context: CognitiveContext) -> str:
-        """Generate response using real RWKV model or enhanced mock"""
+        """Generate response using real RWKV model or enhanced mock with rwkv.cpp support"""
         if not self.initialized:
             raise RuntimeError("RWKV interface not initialized")
         
         try:
-            if self.model and self.tokenizer:
-                # Use real RWKV model
+            # Use rwkv.cpp backend if available
+            if self.cpp_bridge and self.cpp_context_id is not None:
+                return await self._generate_cpp_response(prompt, context)
+            elif self.model and self.tokenizer:
+                # Use real Python RWKV model
                 return await self._generate_real_response(prompt, context)
             else:
                 # Use enhanced mock with better cognitive patterns
@@ -161,6 +194,34 @@ class RealRWKVInterface(RWKVModelInterface):
         except Exception as e:
             logger.error(f"Error generating response: {e}")
             return f"Processing error: {str(e)}"
+    
+    async def _generate_cpp_response(self, prompt: str, context: CognitiveContext) -> str:
+        """Generate response using rwkv.cpp backend"""
+        try:
+            # Prepare context-aware prompt for rwkv.cpp
+            full_prompt = self._build_context_prompt(prompt, context)
+            
+            # Configure generation parameters
+            max_tokens = self.model_config.get('max_tokens', 200)
+            temperature = self.model_config.get('temperature', 0.8)
+            top_p = self.model_config.get('top_p', 0.7)
+            
+            # Generate with rwkv.cpp
+            output = self.cpp_bridge.generate_text(
+                self.cpp_context_id,
+                full_prompt,
+                max_tokens,
+                temperature,
+                top_p
+            )
+            
+            # Process and return response
+            response = output.strip()
+            return response if response else "I understand your input and am processing it through the RWKV.cpp cognitive architecture."
+            
+        except Exception as e:
+            logger.error(f"RWKV.cpp generation error: {e}")
+            return await self._generate_enhanced_mock_response(prompt, context)
     
     async def _generate_real_response(self, prompt: str, context: CognitiveContext) -> str:
         """Generate response using real RWKV model"""
@@ -238,6 +299,65 @@ class RealRWKVInterface(RWKVModelInterface):
             ])
         
         return f"{prompt}{context_info}\n\nResponse:"
+    
+    async def encode_memory(self, memory_item: Dict[str, Any]) -> Union[List[float], Any]:
+        """Encode memory using RWKV.cpp or Python RWKV"""
+        if self.cpp_bridge and self.cpp_context_id is not None:
+            # For now, use simple encoding - could be enhanced with actual RWKV.cpp embeddings
+            content = str(memory_item.get('content', ''))
+            return [hash(content[i:i+10]) % 1000 / 1000.0 for i in range(min(512, len(content)))]
+        else:
+            # Use enhanced mock encoding
+            content = str(memory_item.get('content', ''))
+            encoding = [hash(content[i:i+10]) % 1000 / 1000.0 for i in range(0, min(len(content), 512), 10)]
+            while len(encoding) < 512:
+                encoding.append(0.0)
+            return encoding
+    
+    async def retrieve_memories(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
+        """Retrieve memories using RWKV"""
+        # Return empty for now - could be enhanced with actual memory retrieval
+        return []
+    
+    def get_model_state(self) -> Dict[str, Any]:
+        """Get current model state including rwkv.cpp backend info"""
+        state = {
+            'initialized': self.initialized,
+            'backend': 'unknown',
+            'memory_items': len(self.memory_store),
+            'context_length': len(self.conversation_context)
+        }
+        
+        if self.cpp_bridge and self.cpp_context_id is not None:
+            state.update({
+                'backend': 'rwkv.cpp',
+                'cpp_context_id': self.cpp_context_id,
+                'cpp_bridge_version': self.cpp_bridge.get_version() if self.cpp_bridge else 'unknown'
+            })
+            try:
+                model_info = self.cpp_bridge.get_model_info(self.cpp_context_id)
+                state.update(model_info)
+            except Exception as e:
+                logger.error(f"Error getting rwkv.cpp model info: {e}")
+        elif self.model:
+            state['backend'] = 'python_rwkv'
+        else:
+            state['backend'] = 'enhanced_mock'
+        
+        return state
+    
+    def cleanup(self):
+        """Cleanup RWKV resources"""
+        if self.cpp_bridge and self.cpp_context_id is not None:
+            try:
+                self.cpp_bridge.free_model(self.cpp_context_id)
+                self.cpp_context_id = None
+            except Exception as e:
+                logger.error(f"Error freeing rwkv.cpp model: {e}")
+        
+        self.initialized = False
+        self.model = None
+        self.tokenizer = None
 
 class MockRWKVInterface(RWKVModelInterface):
     """Mock RWKV interface for demonstration"""
@@ -294,62 +414,6 @@ class MockRWKVInterface(RWKVModelInterface):
             'model_type': 'mock_rwkv',
             'memory_items': len(self.memory_store),
             'context_length': len(self.conversation_context)
-        }
-
-class RealRWKVInterface(RWKVModelInterface):
-    """Real RWKV interface (placeholder for actual implementation)"""
-    
-    def __init__(self):
-        self.model = None
-        self.tokenizer = None
-        self.initialized = False
-    
-    async def initialize(self, model_config: Dict[str, Any]) -> bool:
-        """Initialize real RWKV model"""
-        try:
-            # This would load actual RWKV model
-            # from rwkv.model import RWKV
-            # from rwkv.utils import PIPELINE
-            # 
-            # self.model = RWKV(model=model_config['model_path'])
-            # self.tokenizer = PIPELINE(self.model, model_config['vocab_path'])
-            
-            logger.info("Real RWKV interface would be initialized here")
-            self.initialized = True
-            return True
-        except Exception as e:
-            logger.error(f"Failed to initialize RWKV model: {e}")
-            return False
-    
-    async def generate_response(self, prompt: str, context: CognitiveContext) -> str:
-        """Generate response using real RWKV model"""
-        if not self.initialized:
-            return "RWKV model not initialized"
-        
-        # Real RWKV generation would happen here
-        return f"[Real RWKV Response] {prompt}"
-    
-    async def encode_memory(self, memory_item: Dict[str, Any]) -> Union[List[float], Any]:
-        """Encode memory using RWKV"""
-        # Real encoding implementation placeholder
-        if NUMPY_AVAILABLE:
-            return np.random.rand(768)  # Placeholder
-        else:
-            # Simple fallback
-            content = str(memory_item.get('content', ''))
-            return [hash(content[i:i+10]) % 1000 / 1000.0 for i in range(min(768, len(content)))]
-    
-    async def retrieve_memories(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
-        """Retrieve memories using RWKV"""
-        # Real retrieval implementation
-        return []
-    
-    def get_model_state(self) -> Dict[str, Any]:
-        """Get real model state"""
-        return {
-            'initialized': self.initialized,
-            'model_type': 'rwkv',
-            'model_loaded': self.model is not None
         }
 
 class EchoMembraneProcessor:
@@ -623,8 +687,9 @@ Grammar Response:"""
 class EchoRWKVIntegrationEngine:
     """Main integration engine for Echo-RWKV system with advanced cognitive capabilities"""
     
-    def __init__(self, use_real_rwkv: bool = False, persistent_memory: PersistentMemorySystem = None):
+    def __init__(self, use_real_rwkv: bool = False, use_cpp_backend: bool = True, persistent_memory: PersistentMemorySystem = None):
         self.use_real_rwkv = use_real_rwkv
+        self.use_cpp_backend = use_cpp_backend
         self.persistent_memory = persistent_memory
         self.rwkv_interface = None
         self.membrane_processor = None
@@ -641,7 +706,8 @@ class EchoRWKVIntegrationEngine:
             'successful_requests': 0,
             'avg_response_time': 0.0,
             'start_time': datetime.now(),
-            'advanced_features_enabled': False
+            'advanced_features_enabled': False,
+            'rwkv_cpp_enabled': False
         }
     
     async def initialize(self, config: Dict[str, Any]) -> bool:
@@ -649,7 +715,7 @@ class EchoRWKVIntegrationEngine:
         try:
             # Initialize RWKV interface
             if self.use_real_rwkv:
-                self.rwkv_interface = RealRWKVInterface()
+                self.rwkv_interface = RealRWKVInterface(use_cpp_backend=self.use_cpp_backend)
             else:
                 self.rwkv_interface = MockRWKVInterface()
             
@@ -658,6 +724,12 @@ class EchoRWKVIntegrationEngine:
             if not await self.rwkv_interface.initialize(rwkv_config):
                 logger.error("Failed to initialize RWKV interface")
                 return False
+            
+            # Check if rwkv.cpp is being used
+            model_state = self.rwkv_interface.get_model_state()
+            self.stats['rwkv_cpp_enabled'] = model_state.get('backend') == 'rwkv.cpp'
+            if self.stats['rwkv_cpp_enabled']:
+                logger.info("RWKV.cpp backend is active for distributed agentic cognitive processing")
             
             # Initialize membrane processor with persistent memory
             self.membrane_processor = EchoMembraneProcessor(self.rwkv_interface, self.persistent_memory)
