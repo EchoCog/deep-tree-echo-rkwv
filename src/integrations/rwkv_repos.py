@@ -50,6 +50,22 @@ class RWKVRepoManager:
             {
                 "name": "RWKV-LM",
                 "repo_type": RWKVRepoType.MAIN_LM,
+                "description": "Main RWKV language model repository with RWKV-7 'Goose'",
+                "entry_points": {
+                    "demo": "RWKV-v7/rwkv_v7_demo.py",
+                    "demo_fast": "RWKV-v7/rwkv_v7_demo_fast.py", 
+                    "demo_rnn": "RWKV-v7/rwkv_v7_demo_rnn.py",
+                    "numpy": "RWKV-v7/rwkv_v7_numpy.py",
+                    "train": "RWKV-v7/train_temp/",
+                },
+                "dependencies": ["torch", "numpy", "transformers"],
+                "metadata": {
+                    "status": "available"
+                }
+            },
+            {
+                "name": "RWKV-LM",
+                "repo_type": RWKVRepoType.MAIN_LM,
                 "description": "Main RWKV language model with RWKV-7 'Goose'",
                 "entry_points": {
                     "train": "train.py",
@@ -65,7 +81,9 @@ class RWKVRepoManager:
                     "chat": "chat.py",
                     "api": "API_DEMO.py",
                     "web": "web.py"
-                }
+                },
+                "dependencies": ["torch", "numpy", "rwkv"],
+                "metadata": {"status": "planned"}
             },
             {
                 "name": "RWKV-CUDA",
@@ -74,13 +92,17 @@ class RWKVRepoManager:
                 "entry_points": {
                     "cuda_kernel": "cuda/wkv_cuda_kernel.cu",
                     "ops": "wkv_op.py"
-                }
+                },
+                "dependencies": ["torch", "numpy", "cuda-toolkit"],
+                "metadata": {"status": "planned"}
             },
             {
                 "name": "WorldModel",
                 "repo_type": RWKVRepoType.WORLD_MODEL,
                 "description": "Psychohistory project for LLM grounding", 
-                "entry_points": {}
+                "entry_points": {},
+                "dependencies": ["torch", "numpy"],
+                "metadata": {"status": "planned"}
             },
             {
                 "name": "RWKV-v2-RNN-Pile", 
@@ -89,7 +111,9 @@ class RWKVRepoManager:
                 "entry_points": {
                     "model": "inference.py",
                     "chat": "chat.py"
-                }
+                },
+                "dependencies": ["torch", "numpy"],
+                "metadata": {"status": "planned"}
             }
         ]
         
@@ -101,11 +125,22 @@ class RWKVRepoManager:
                 path=repo_path,
                 description=config["description"],
                 available=repo_path.exists(),
-                entry_points=config["entry_points"]
+                dependencies=config.get("dependencies", []),
+                entry_points=config.get("entry_points", {}),
+                metadata=config.get("metadata", {})
             )
             
             if repo_info.available:
                 self._scan_repository(repo_info)
+                
+                # Update metadata for RWKV-LM specifically
+                if repo_info.name == "RWKV-LM":
+                    repo_info.metadata.update({
+                        "versions": ["v1", "v2", "v3", "v4", "v4neo", "v5", "v6", "v7", "v8"],
+                        "latest_version": "v7",
+                        "architecture": "linear-time RNN",
+                        "features": ["attention-free", "constant-space", "parallelizable", "meta-in-context-learning"]
+                    })
             
             self.repositories[config["name"]] = repo_info
             
