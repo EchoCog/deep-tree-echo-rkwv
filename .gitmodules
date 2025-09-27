@@ -1,3 +1,6 @@
 [submodule "external/rwkv-cpp"]
 	path = external/rwkv-cpp
 	url = https://github.com/RWKV/rwkv.cpp.git
+[submodule "dependencies/rwkv-cpp"]
+	path = dependencies/rwkv-cpp
+	url = https://github.com/RWKV/rwkv.cpp.git
