@@ -18,7 +18,13 @@ Deep Tree Echo is a membrane-based cognitive architecture that implements struct
 
 ## 🚀 Key Features
 
+```<<<<<<< copilot/fix-40-2```
+### Current Implementation (v1.2 - RWKV.cpp Integration)
+- ✅ **Real RWKV Models**: Integrated RWKV.cpp for actual language model inference
+- ✅ **RWKV.cpp Backend**: High-performance C++ backend with Python bindings
+```=======```
 ### Current Implementation (v1.1 - Scalable Architecture + RWKV.cpp Integration)
+```>>>>>>> main```
 - ✅ **Membrane-Based Cognitive Processing**: Real-time cognitive architecture with specialized membranes
 - ✅ **RWKV.cpp Integration**: High-performance C++ RWKV inference engine for distributed processing
 - ✅ **RWKV Integration Bridge**: Sophisticated abstraction layer for language model integration
@@ -32,10 +38,18 @@ Deep Tree Echo is a membrane-based cognitive architecture that implements struct
 - ✅ **Auto-Scaling**: Intelligent scaling based on load thresholds (80% up, 30% down)
 - ✅ **Comprehensive Monitoring**: Prometheus metrics, Grafana dashboards, Jaeger tracing
 - ✅ **Performance Optimization**: Sub-50ms response times, 2500+ req/min throughput
+```<<<<<<< copilot/fix-40-2```
+- ✅ **External RWKV Repositories**: Integrated with BlinkDL RWKV repositories
+
+### Planned Features (Roadmap)
+- ✅ **Real RWKV Models**: Integrated RWKV.cpp with actual RWKV language models
+- 🔄 **GPU Acceleration**: cuBLAS/hipBLAS support for RWKV.cpp GPU inference
+```=======```
 - ✅ **Distributed Agentic Cognitive Micro-Kernel Network**: Thread-safe, modular cognitive processing
 
 ### Planned Features (Roadmap)
 - ✅ **Real RWKV Models**: Integrated with external BlinkDL RWKV repositories + high-performance rwkv.cpp
+```>>>>>>> main```
 - 🔄 **Persistent Memory**: Advanced memory architecture with semantic search and learning
 - 🔄 **Advanced Security**: Enterprise-grade authentication, authorization, and encryption
 - ✅ **Scalable Architecture**: Distributed processing with auto-scaling capabilities
@@ -47,16 +61,24 @@ Deep Tree Echo is a membrane-based cognitive architecture that implements struct
 ```
 🎪 Deep Tree Echo WebVM-RWKV Integration
 ├── 🧠 Cognitive Processing Layer
-│   ├── 💭 Memory Membrane (Storage & Retrieval)
-│   ├── ⚡ Reasoning Membrane (Inference & Logic)
-│   └── 🎭 Grammar Membrane (Symbolic Processing)
+│   ├── 💭 Memory Membrane (Storage & Retrieval with RWKV.cpp)
+│   ├── ⚡ Reasoning Membrane (Inference & Logic with RWKV.cpp)
+│   └── 🎭 Grammar Membrane (Symbolic Processing with RWKV.cpp)
 ├── 🔌 RWKV Integration Bridge
+```<<<<<<< copilot/fix-40-2```
+│   ├── Real RWKV Model Loading & Management
+│   ├── CPU-Optimized Inference (O(n) complexity)
+│   ├── Quantized Models (INT4/INT5/INT8)
+│   ├── Python Bindings & C++ Backend
+│   └── External Repository Integration
+```=======```
 │   ├── High-Performance RWKV.cpp Backend
 │   ├── Python RWKV Fallback Support
 │   ├── Model Loading & Management
 │   ├── Tokenization & Preprocessing
 │   ├── External Repository Integration
 │   └── Inference Optimization
+```>>>>>>> main```
 ├── 🌐 Distributed Architecture Layer
 │   ├── 🔄 Load Balancer (Auto-scaling & Service Discovery)
 │   ├── 💾 Multi-Level Cache (L1/L2/L3 with Compression)
@@ -64,12 +86,12 @@ Deep Tree Echo is a membrane-based cognitive architecture that implements struct
 │   ├── 🧠 Distributed Agentic Cognitive Micro-Kernel Network
 │   └── 📊 Monitoring (Prometheus, Grafana, Jaeger)
 ├── 🌐 WebVM Deployment Layer
-│   ├── Memory Optimization
+│   ├── Memory Optimization (RWKV.cpp quantization)
 │   ├── Resource Management
 │   └── Browser Compatibility
 └── 🖥️ Web Interface
     ├── Real-time Cognitive Visualization
-    ├── Interactive Conversation Interface
+    ├── Interactive Conversation Interface (with real RWKV)
     └── Performance Monitoring Dashboard
 ```
 
@@ -77,10 +99,30 @@ Deep Tree Echo is a membrane-based cognitive architecture that implements struct
 
 ### Prerequisites
 - Docker and Docker Compose
-- 4GB+ RAM (8GB recommended for distributed mode)
+- 4GB+ RAM (8GB recommended for distributed mode)  
 - Modern web browser
 
-### Scalable Deployment (Recommended)
+### Fastest Start - Single Instance
+
+1. **Clone and install**
+```bash
+git clone https://github.com/EchoCog/deep-tree-echo-rkwv.git
+cd deep-tree-echo-rkwv/src
+pip install rwkv  # Essential RWKV package
+pip install -r requirements.txt
+```
+
+2. **Run immediately**
+```bash
+python app.py
+```
+
+3. **Access the application**
+Open http://localhost:8000 and start using the cognitive architecture!
+
+**✨ Works out of the box** - The system uses the standard RWKV package and provides full cognitive processing capabilities.
+
+### Advanced: Scalable Deployment (Full Features)
 
 1. **Clone and start the distributed architecture**
 ```bash
@@ -113,10 +155,11 @@ cd deep-tree-echo-webvm-rwkv
 
 ### Single Instance Deployment
 
-1. **Install Python dependencies**
+1. **Quick Install with RWKV**
 ```bash
 cd src
-pip install -r requirements.txt
+pip install rwkv  # Simple RWKV installation
+pip install -r requirements.txt  # All dependencies
 ```
 
 2. **Run the application**
@@ -126,6 +169,8 @@ python app.py
 
 3. **Access the interface**
 Open your browser to `http://localhost:8000`
+
+**Note**: The system works immediately with the standard RWKV package. For enhanced performance, see the [RWKV.cpp Integration Guide](docs/RWKV_CPP_INTEGRATION.md).
 
 ### Docker Deployment
 
@@ -166,6 +211,7 @@ See [webvm/README.md](webvm/README.md) for detailed WebVM deployment guide.
 ## 📖 Documentation
 
 ### Core Documentation
+- [**RWKV.cpp Integration Guide**](docs/RWKV_CPP_INTEGRATION.md) - Complete RWKV.cpp integration documentation
 - [**Development Roadmap**](docs/development_roadmap.md) - Comprehensive 50-week implementation plan
 - [**System Analysis**](docs/system_analysis.md) - Technical architecture and design decisions
 - [**Deployment Summary**](docs/deployment_summary.md) - Production deployment guide
@@ -184,8 +230,12 @@ deep-tree-echo-webvm-rwkv/
 ├── src/                    # Source code
 │   ├── app.py             # Main Flask application
 │   ├── echo_rwkv_bridge.py # RWKV integration bridge
+│   ├── rwkv_cpp_integration.py # RWKV.cpp integration layer
 │   ├── templates/         # HTML templates
 │   └── static/           # CSS, JS, assets
+├── dependencies/           # RWKV.cpp and external repositories
+│   └── rwkv-cpp/         # RWKV.cpp submodule
+├── external/              # External BlinkDL RWKV repositories
 ├── webvm/                 # WebVM deployment configuration
 │   ├── config/           # WebVM-specific configuration
 │   ├── assets/           # WebVM assets and documentation

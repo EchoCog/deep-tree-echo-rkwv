@@ -45,6 +45,10 @@ pytest-asyncio>=0.21.0
 black>=23.0.0
 flake8>=5.0.0
 
+# RWKV.cpp integration dependencies
+# Note: RWKV.cpp Python bindings are included as submodule
+# The C++ library needs to be built separately
+
 # Optional: For enhanced performance
 # psutil>=5.9.0
 # memory-profiler>=0.60.0
