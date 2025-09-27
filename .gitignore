@@ -95,3 +95,10 @@ secrets.json
 /src/data/
 /src/logs/
 echo_data/
+
+# External repositories (cloned BlinkDL RWKV repos)
+external/RWKV-LM/
+external/ChatRWKV/
+external/RWKV-CUDA/
+external/WorldModel/
+external/RWKV-v2-RNN-Pile/
