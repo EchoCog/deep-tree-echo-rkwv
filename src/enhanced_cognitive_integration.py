@@ -33,6 +33,12 @@ from enhanced_preference_learning import (
     LearningStrategy
 )
 
+# Import Dual Persona System
+from dual_persona_kernel import (
+    DualPersonaProcessor, PersonaType, PersonaTraitType, 
+    DualPersonaResponse, format_dual_response_for_ui
+)
+
 logger = logging.getLogger(__name__)
 
 class EnhancedCognitiveProcessor:
@@ -51,8 +57,11 @@ class EnhancedCognitiveProcessor:
             self.explanation_generator = ExplanationGenerator()
             self.enhanced_personalization_engine = EnhancedPersonalizationEngine()
             
+            # Initialize Dual Persona System
+            self.dual_persona_processor = DualPersonaProcessor()
+            
             self.enhanced_processing_enabled = True
-            logger.info("Enhanced cognitive processor initialized successfully with Task 2.6 & 2.7 components")
+            logger.info("Enhanced cognitive processor initialized successfully with Task 2.6 & 2.7 components and Dual Persona System")
         except Exception as e:
             logger.error(f"Failed to initialize enhanced cognitive systems: {e}")
             self.enhanced_processing_enabled = False
@@ -149,6 +158,103 @@ class EnhancedCognitiveProcessor:
             
         except Exception as e:
             logger.error(f"Error in enhanced cognitive processing: {e}")
+            if fallback_processor:
+                return fallback_processor(input_text)
+            else:
+                return self._create_fallback_response(input_text, start_time)
+    
+    async def process_input_dual_persona(self, input_text: str, session_id: str, 
+                                       conversation_history: List[Dict], 
+                                       memory_state: Dict,
+                                       fallback_processor=None) -> Dict[str, Any]:
+        """Process input through the dual persona system"""
+        start_time = time.time()
+        
+        if not self.enhanced_processing_enabled:
+            if fallback_processor:
+                basic_result = fallback_processor(input_text)
+                return self._wrap_fallback_result(basic_result, start_time)
+            else:
+                return self._create_fallback_response(input_text, start_time)
+        
+        try:
+            # Create context for dual persona processing
+            dual_context = {
+                'user_input': input_text,
+                'conversation_history': conversation_history,
+                'memory_state': memory_state,
+                'session_id': session_id
+            }
+            
+            # Process through dual persona system
+            dual_response = self.dual_persona_processor.process_dual_query(
+                input_text, dual_context, session_id
+            )
+            
+            # Format for UI and integration
+            formatted_response = format_dual_response_for_ui(dual_response)
+            
+            # Meta-cognitive evaluation of dual persona processing
+            cognitive_metrics = self.meta_cognitive_system.after_processing(
+                {
+                    'response': formatted_response,
+                    'total_processing_time': dual_response.total_processing_time,
+                    'confidence_score': (dual_response.deep_tree_echo_response.confidence + 
+                                       dual_response.marduk_response.confidence) / 2,
+                    'convergence_score': dual_response.convergence_score
+                },
+                {'strategy_selected': 'dual_persona'}
+            )
+            
+            # Create enhanced conversation entry with dual persona data
+            conversation_entry = {
+                'timestamp': datetime.now().isoformat(),
+                'input': input_text,
+                'response': formatted_response,
+                'processing_time': dual_response.total_processing_time,
+                'dual_persona_data': {
+                    'deep_tree_echo': {
+                        'content': dual_response.deep_tree_echo_response.content,
+                        'confidence': dual_response.deep_tree_echo_response.confidence,
+                        'reasoning': dual_response.deep_tree_echo_response.reasoning_process,
+                        'trait_activations': {k.value: v for k, v in dual_response.deep_tree_echo_response.trait_activations.items()}
+                    },
+                    'marduk': {
+                        'content': dual_response.marduk_response.content,
+                        'confidence': dual_response.marduk_response.confidence,
+                        'reasoning': dual_response.marduk_response.reasoning_process,
+                        'trait_activations': {k.value: v for k, v in dual_response.marduk_response.trait_activations.items()}
+                    },
+                    'reflection': dual_response.reflection_content,
+                    'synthesis': dual_response.synthesis,
+                    'convergence_score': dual_response.convergence_score
+                },
+                'cognitive_metadata': {
+                    'processing_mode': 'dual_persona',
+                    'meta_cognitive_insights': cognitive_metrics.to_dict() if hasattr(cognitive_metrics, 'to_dict') else None,
+                    'persona_convergence': dual_response.convergence_score,
+                    'avg_confidence': (dual_response.deep_tree_echo_response.confidence + 
+                                     dual_response.marduk_response.confidence) / 2
+                }
+            }
+            
+            # Store in memory if significant
+            if self.persistent_memory and self._is_memory_significant(input_text):
+                self.persistent_memory.store_memory(
+                    content=f"Dual persona interaction: {input_text}",
+                    memory_type="episodic",
+                    session_id=session_id,
+                    metadata={
+                        'processing_mode': 'dual_persona',
+                        'convergence_score': dual_response.convergence_score,
+                        'timestamp': datetime.now().isoformat()
+                    }
+                )
+            
+            return conversation_entry
+            
+        except Exception as e:
+            logger.error(f"Error in dual persona processing: {e}")
             if fallback_processor:
                 return fallback_processor(input_text)
             else:

@@ -847,6 +847,11 @@ def cognitive_interface():
     """Cognitive interaction interface"""
     return render_template('cognitive.html')
 
+@app.route('/dual-persona')
+def dual_persona_interface():
+    """Dual persona cognitive interface"""
+    return render_template('dual_persona.html')
+
 @app.route('/api/session', methods=['POST'])
 def create_session():
     """Create new cognitive session"""
@@ -949,6 +954,50 @@ def process_cognitive_input():
     except Exception as e:
         logger.error(f"Error processing input: {e}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/process/dual-persona', methods=['POST'])
+def process_dual_persona():
+    """Process cognitive input through the dual persona system (Deep Tree Echo + Marduk)"""
+    try:
+        data = request.get_json()
+        if not data or 'input' not in data:
+            return jsonify({'error': 'No input provided'}), 400
+        
+        session_id = data.get('session_id')
+        if not session_id:
+            return jsonify({'error': 'No session ID provided'}), 400
+        
+        input_text = data['input']
+        
+        # Get cognitive session
+        session = get_cognitive_session(session_id)
+        if not session:
+            return jsonify({'error': 'Session not found'}), 404
+        
+        # Process through dual persona system if available
+        if enhanced_cognitive_processor and CONFIG['enable_advanced_cognitive']:
+            result = run_async_task(enhanced_cognitive_processor.process_input_dual_persona(
+                input_text, session_id, session.conversation_history, 
+                session.memory_state, session.process_input
+            ))
+            
+            # Add the dual persona response to session history
+            if 'dual_persona_data' in result:
+                session.conversation_history.append(result)
+            
+            system_metrics['total_requests'] += 1
+            system_metrics['last_activity'] = datetime.now()
+            
+            return jsonify(result)
+        else:
+            return jsonify({
+                'error': 'Dual persona system not available',
+                'details': 'Advanced cognitive processing is disabled or not initialized'
+            }), 503
+        
+    except Exception as e:
+        logger.error(f"Error in dual persona processing: {e}")
+        return jsonify({'error': 'Dual persona processing failed', 'details': str(e)}), 500
 
 @app.route('/api/conversation/<session_id>')
 def get_conversation_history(session_id: str):
@@ -1272,6 +1321,37 @@ def get_personalization_status(session_id: str):
         
     except Exception as e:
         logger.error(f"Error getting personalization status: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/personas/status')
+def get_persona_status():
+    """Get current status of both personas in the dual persona system"""
+    try:
+        if enhanced_cognitive_processor and CONFIG['enable_advanced_cognitive']:
+            if hasattr(enhanced_cognitive_processor, 'dual_persona_processor'):
+                persona_status = enhanced_cognitive_processor.dual_persona_processor.get_persona_status()
+                return jsonify({
+                    'status': 'active',
+                    'personas': persona_status,
+                    'system_info': {
+                        'dual_persona_enabled': True,
+                        'processing_mode': 'dual_hemisphere',
+                        'last_update': datetime.now().isoformat()
+                    }
+                })
+            else:
+                return jsonify({
+                    'status': 'initializing',
+                    'message': 'Dual persona processor not yet initialized'
+                })
+        else:
+            return jsonify({
+                'status': 'disabled',
+                'message': 'Advanced cognitive processing is disabled'
+            })
+            
+    except Exception as e:
+        logger.error(f"Error getting persona status: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/cognitive/meta-analysis/<session_id>')
@@ -1624,6 +1704,8 @@ dashboard_template = '''
                 <h3>🚀 Quick Actions</h3>
                 <p>Start interacting with the cognitive architecture:</p>
                 <a href="/cognitive" class="btn">Launch Cognitive Interface</a>
+                <br><br>
+                <a href="/dual-persona" class="btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">🧠 Dual Persona Mode</a>
                 <br><br>
                 <a href="/api/status" class="btn btn-secondary">View API Status</a>
                 <br><br>
