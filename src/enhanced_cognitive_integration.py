@@ -23,21 +23,12 @@ from adaptive_learning import (
     CognitiveStrategyLearner, UserPreference, FeedbackEntry
 )
 
-logger = logging.getLogger(__name__)
-
-class EnhancedCognitiveProcessor:
-    """Enhanced cognitive processor integrating Phase 2 capabilities"""
-    
-    def __init__(self, persistent_memory=None):
-        self.persistent_memory = persistent_memory
-        
-        # Initialize Phase 2 systems
-        try:
-            self.meta_cognitive_system = MetaCognitiveReflectionSystem()
-            self.complex_reasoning_system = ComplexReasoningSystem()
-            self.adaptive_learning_system = AdaptiveLearningSystem()
+# Initialize Task 2.6 and 2.7 Enhanced Systems
+            self.explanation_generator = ExplanationGenerator()
+            self.enhanced_personalization_engine = EnhancedPersonalizationEngine()
+            
             self.enhanced_processing_enabled = True
-            logger.info("Enhanced cognitive processor initialized successfully")
+            logger.info("Enhanced cognitive processor initialized successfully with Task 2.6 & 2.7 components")
         except Exception as e:
             logger.error(f"Failed to initialize enhanced cognitive systems: {e}")
             self.enhanced_processing_enabled = False
@@ -466,4 +457,171 @@ class EnhancedCognitiveProcessor:
                 'advanced_processing_enabled': False,
                 'enhanced_confidence': 0.6
             }
+}
+
+    # Task 2.6: Explanation Generation System Methods
+    def generate_reasoning_explanation(self, reasoning_data: Dict[str, Any], 
+                                     user_preferences: Optional[Dict[str, Any]] = None,
+                                     detail_level: str = 'detailed') -> Dict[str, Any]:
+        """Generate human-readable explanation of reasoning process"""
+        try:
+            # Create explanation request
+            request = ExplanationRequest(
+                content_type='reasoning_chain',
+                content_data=reasoning_data,
+                target_audience=user_preferences.get('audience', 'general') if user_preferences else 'general',
+                style_preference=self._map_to_explanation_style(user_preferences),
+                detail_level=self._map_to_explanation_level(detail_level),
+                include_confidence=True,
+                include_alternatives=user_preferences.get('include_alternatives', False) if user_preferences else False,
+                personalization_context=user_preferences
+            )
+            
+            # Generate explanation
+            explanation = self.explanation_generator.generate_explanation(request)
+            
+            return {
+                'success': True,
+                'explanation': {
+                    'id': explanation.explanation_id,
+                    'text': explanation.generated_text,
+                    'confidence_score': explanation.confidence_score,
+                    'clarity_score': explanation.clarity_score,
+                    'word_count': explanation.word_count,
+                    'reading_time_minutes': explanation.reading_time_minutes,
+                    'sections': explanation.sections,
+                    'interactive_elements': explanation.interactive_elements
+                },
+                'generation_time': explanation.generation_time
+            }
+            
+        except Exception as e:
+            logger.error(f"Error generating explanation: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'fallback_explanation': f"Basic analysis of reasoning process: {reasoning_data.get('query', 'unknown query')}"
+            }
+    
+    def generate_cognitive_explanation(self, processing_result: Dict[str, Any],
+                                     session_id: str) -> Dict[str, Any]:
+        """Generate explanation of overall cognitive processing"""
+        try:
+            # Get user personalization context
+            personalization_context = self.enhanced_personalization_engine.get_personalized_response_context(
+                session_id, session_id, {}
+            )
+            
+            # Create explanation data
+            explanation_data = {
+                'query': processing_result.get('original_query', ''),
+                'processing_strategy': processing_result.get('processing_strategy', 'unknown'),
+                'memory_retrievals': processing_result.get('memory_retrievals', 0),
+                'reasoning_steps': processing_result.get('reasoning_steps', 0),
+                'overall_confidence': processing_result.get('confidence', 0.0),
+                'processing_time': processing_result.get('processing_time', 0.0),
+                'enhanced_features': processing_result.get('enhanced_features', {})
+            }
+            
+            # Generate explanation
+            return self.generate_reasoning_explanation(
+                explanation_data, 
+                personalization_context, 
+                'detailed'
+            )
+            
+        except Exception as e:
+            logger.error(f"Error generating cognitive explanation: {e}")
+            return {'success': False, 'error': str(e)}
+
+    # Task 2.7: Enhanced User Preference Learning Methods
+    def learn_user_preferences(self, session_id: str, query: str, response: str,
+                             conversation_history: List[Dict[str, Any]],
+                             feedback: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Learn and update user preferences from interaction"""
+        try:
+            # Process interaction for enhanced preference learning
+            learning_result = self.enhanced_personalization_engine.process_interaction_for_learning(
+                session_id, session_id, query, response, conversation_history, feedback
+            )
+            
+            return {
+                'success': True,
+                'learning_result': learning_result,
+                'preferences_learned': learning_result.get('preferences_learned', []),
+                'personalization_confidence': learning_result.get('personalization_confidence', 0.0)
+            }
+            
+        except Exception as e:
+            logger.error(f"Error in preference learning: {e}")
+            return {'success': False, 'error': str(e)}
+    
+    def get_personalized_context(self, session_id: str) -> Dict[str, Any]:
+        """Get personalized context for response generation"""
+        try:
+            return self.enhanced_personalization_engine.get_personalized_response_context(
+                session_id, session_id, {}
+            )
+        except Exception as e:
+            logger.error(f"Error getting personalized context: {e}")
+            return {}
+    
+    def get_user_profile_insights(self, session_id: str) -> Dict[str, Any]:
+        """Get insights about user preferences and behavior patterns"""
+        try:
+            return self.enhanced_personalization_engine.get_profile_insights(session_id)
+        except Exception as e:
+            logger.error(f"Error getting profile insights: {e}")
+            return {'error': str(e)}
+    
+    # Helper methods for explanation generation
+    def _map_to_explanation_style(self, user_preferences: Optional[Dict[str, Any]]) -> ExplanationStyle:
+        """Map user preferences to explanation style"""
+        if not user_preferences:
+            return ExplanationStyle.CONVERSATIONAL
+        
+        comm_style = user_preferences.get('preferred_communication_style', 'conversational')
+        
+        style_mapping = {
+            'direct': ExplanationStyle.MINIMAL,
+            'detailed': ExplanationStyle.TECHNICAL,
+            'conversational': ExplanationStyle.CONVERSATIONAL,
+            'formal': ExplanationStyle.TECHNICAL,
+            'analytical': ExplanationStyle.TECHNICAL,
+            'creative': ExplanationStyle.NARRATIVE
         }
+        
+        return style_mapping.get(comm_style, ExplanationStyle.CONVERSATIONAL)
+    
+    def _map_to_explanation_level(self, detail_level: str) -> ExplanationLevel:
+        """Map detail level string to ExplanationLevel enum"""
+        level_mapping = {
+            'overview': ExplanationLevel.OVERVIEW,
+            'detailed': ExplanationLevel.DETAILED,
+            'step_by_step': ExplanationLevel.STEP_BY_STEP,
+            'interactive': ExplanationLevel.INTERACTIVE
+        }
+        
+        return level_mapping.get(detail_level, ExplanationLevel.DETAILED)
+    
+    def get_enhanced_system_status(self) -> Dict[str, Any]:
+        """Get comprehensive status of enhanced cognitive systems"""
+        try:
+            base_status = {
+                'enhanced_processing_enabled': self.enhanced_processing_enabled,
+                'meta_cognitive_system_active': self.meta_cognitive_system is not None,
+                'complex_reasoning_system_active': self.complex_reasoning_system is not None,
+                'adaptive_learning_system_active': self.adaptive_learning_system is not None,
+                'explanation_generator_active': hasattr(self, 'explanation_generator') and self.explanation_generator is not None,
+                'enhanced_personalization_active': hasattr(self, 'enhanced_personalization_engine') and self.enhanced_personalization_engine is not None
+            }
+            
+            # Add system statistics
+            if hasattr(self, 'explanation_generator') and self.explanation_generator:
+                base_status['explanation_stats'] = self.explanation_generator.get_system_stats()
+            
+            return base_status
+            
+        except Exception as e:
+            logger.error(f"Error getting enhanced system status: {e}")
+            return {'error': str(e)}
