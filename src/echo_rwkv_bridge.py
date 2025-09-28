@@ -1,6 +1,8 @@
 """
 Echo-RWKV Integration Bridge
 Advanced integration layer connecting Deep Tree Echo cognitive architecture with RWKV models
+
+Enhanced with Toroidal Cognitive System support for dual-hemisphere processing.
 """
 
 import os
@@ -30,6 +32,13 @@ try:
 except ImportError:
     # Handle case where persistent_memory is not available
     PersistentMemorySystem = None
+
+# Import Toroidal Cognitive System components
+try:
+    from toroidal_integration import ToroidalEchoRWKVBridge
+    TOROIDAL_AVAILABLE = True
+except ImportError:
+    TOROIDAL_AVAILABLE = False
 
 try:
     from rwkv_cpp_integration import RWKVCppMembraneProcessor, create_rwkv_processor, RWKV_CPP_AVAILABLE
