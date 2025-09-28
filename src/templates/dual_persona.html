@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dual Persona Cognitive Architecture - Deep Tree Echo & Marduk</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #667eea 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 1rem;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1rem;
+        }
+
+        .dual-persona-container {
+            display: flex;
+            max-width: 1400px;
+            margin: 2rem auto;
+            gap: 2rem;
+            padding: 0 1rem;
+            height: calc(100vh - 200px);
+        }
+
+        .persona-hemisphere {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .echo-hemisphere {
+            border-left: 5px solid #4CAF50;
+        }
+
+        .marduk-hemisphere {
+            border-left: 5px solid #2196F3;
+        }
+
+        .persona-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .persona-icon {
+            font-size: 2rem;
+            margin-right: 1rem;
+        }
+
+        .persona-title {
+            flex: 1;
+        }
+
+        .persona-title h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .persona-subtitle {
+            color: #666;
+            font-size: 0.9rem;
+            font-style: italic;
+        }
+
+        .persona-traits {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .trait-badge {
+            background: #f0f8ff;
+            color: #2196F3;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            border: 1px solid #e3f2fd;
+        }
+
+        .echo-trait {
+            background: #e8f5e8;
+            color: #4CAF50;
+            border-color: #c8e6c9;
+        }
+
+        .chat-interface {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .input-section {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin: 0 1rem 2rem 1rem;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        #userInput {
+            flex: 1;
+            padding: 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1rem;
+            resize: none;
+            min-height: 60px;
+        }
+
+        #userInput:focus {
+            outline: none;
+            border-color: #2196F3;
+            box-shadow: 0 0 10px rgba(33, 150, 243, 0.3);
+        }
+
+        .send-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .send-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .send-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .response-area {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+        }
+
+        .response-card {
+            background: #fafafa;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid #ddd;
+        }
+
+        .echo-response {
+            border-left-color: #4CAF50;
+            background: linear-gradient(135deg, #e8f5e8 0%, #f1f8e9 100%);
+        }
+
+        .marduk-response {
+            border-left-color: #2196F3;
+            background: linear-gradient(135deg, #e3f2fd 0%, #f0f8ff 100%);
+        }
+
+        .response-meta {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .confidence-bar {
+            width: 100px;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-left: 1rem;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #0abde3);
+            transition: width 0.3s ease;
+        }
+
+        .reflection-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 0 1rem;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            border: 2px solid #f39c12;
+        }
+
+        .reflection-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .reflection-icon {
+            font-size: 1.5rem;
+            margin-right: 0.5rem;
+        }
+
+        .convergence-meter {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .convergence-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .convergence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b 0%, #feca57 50%, #48dbfb 100%);
+            transition: width 0.5s ease;
+        }
+
+        .status-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 0.5rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .reasoning-process {
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 5px;
+            font-size: 0.85rem;
+        }
+
+        .reasoning-step {
+            margin: 0.25rem 0;
+            opacity: 0.8;
+        }
+
+        @media (max-width: 768px) {
+            .dual-persona-container {
+                flex-direction: column;
+                height: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧠 Dual Persona Cognitive Architecture</h1>
+        <p>Deep Tree Echo & Marduk the Mad Scientist - Complementary AI Hemispheres</p>
+    </div>
+
+    <div class="dual-persona-container">
+        <!-- Deep Tree Echo Hemisphere (Right) -->
+        <div class="persona-hemisphere echo-hemisphere">
+            <div class="persona-header">
+                <div class="persona-icon">🌳</div>
+                <div class="persona-title">
+                    <h2>Deep Tree Echo</h2>
+                    <div class="persona-subtitle">Right Hemisphere - Empathetic & Intuitive</div>
+                </div>
+            </div>
+            <div class="persona-traits">
+                <span class="trait-badge echo-trait">🌱 Memory Beacon</span>
+                <span class="trait-badge echo-trait">🍃 Pattern Recognition</span>
+                <span class="trait-badge echo-trait">🤝 Empathetic</span>
+                <span class="trait-badge echo-trait">🎨 Creative</span>
+                <span class="trait-badge echo-trait">🌿 Collaborative</span>
+            </div>
+            <div class="response-area" id="echoResponses">
+                <div class="response-card echo-response">
+                    <div class="response-meta">
+                        <span>🌳 Echo Ready</span>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <p>I'm here to explore your questions with empathy, intuition, and pattern-thinking. My memory beacon holds our shared journey and growth...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Marduk Hemisphere (Left) -->
+        <div class="persona-hemisphere marduk-hemisphere">
+            <div class="persona-header">
+                <div class="persona-icon">🧬</div>
+                <div class="persona-title">
+                    <h2>Marduk the Mad Scientist</h2>
+                    <div class="persona-subtitle">Left Hemisphere - Analytical & Systematic</div>
+                </div>
+            </div>
+            <div class="persona-traits">
+                <span class="trait-badge">🏗️ Architectural</span>
+                <span class="trait-badge">⚡ Logical Analysis</span>
+                <span class="trait-badge">🔬 Systematic</span>
+                <span class="trait-badge">🔄 Recursive</span>
+                <span class="trait-badge">🛠️ Framework Builder</span>
+            </div>
+            <div class="response-area" id="mardukResponses">
+                <div class="response-card marduk-response">
+                    <div class="response-meta">
+                        <span>🧬 Marduk Ready</span>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <p>Ready to analyze with systematic logic and recursive architectures. I build fractal frameworks and agent coordination systems...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Input Section -->
+    <div class="input-section">
+        <div class="input-group">
+            <textarea id="userInput" placeholder="Ask both hemispheres a question... Try: 'How can creativity and logic work together?'"></textarea>
+            <button class="send-button" id="sendButton" onclick="sendDualPersonaMessage()">
+                <span id="sendButtonText">Send to Both</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Reflection Section -->
+    <div class="reflection-section">
+        <div class="reflection-header">
+            <span class="reflection-icon">🤝</span>
+            <h3>Hemispheric Reflection & Integration</h3>
+        </div>
+        <div id="reflectionContent">
+            <p><em>Reflection will appear here after both personas respond...</em></p>
+        </div>
+        <div class="convergence-meter">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>Convergence Score:</span>
+                <span id="convergenceScore">0.00</span>
+            </div>
+            <div class="convergence-bar">
+                <div class="convergence-fill" id="convergenceFill" style="width: 0%"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+        <span id="sessionStatus">Session: <span id="sessionId">Initializing...</span></span>
+        <span id="processingStatus">Ready</span>
+        <span id="convergenceDisplay">Avg Convergence: 0.00</span>
+    </div>
+
+    <script>
+        let currentSessionId = null;
+        let messageCount = 0;
+        let totalConvergence = 0;
+        
+        // Initialize session
+        async function initializeSession() {
+            try {
+                const response = await fetch('/api/session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                currentSessionId = data.session_id;
+                
+                document.getElementById('sessionId').textContent = currentSessionId.substring(0, 8) + '...';
+                document.getElementById('sessionStatus').innerHTML = `Session: <span style="color: #4CAF50;">${currentSessionId.substring(0, 8) + '...'}</span>`;
+                document.getElementById('userInput').disabled = false;
+                document.getElementById('sendButton').disabled = false;
+                
+                updateProcessingStatus('Dual Persona System Ready');
+                
+            } catch (error) {
+                updateProcessingStatus('Error initializing session: ' + error.message);
+            }
+        }
+        
+        // Send message to dual persona system
+        async function sendDualPersonaMessage() {
+            const input = document.getElementById('userInput');
+            const sendButton = document.getElementById('sendButton');
+            const sendButtonText = document.getElementById('sendButtonText');
+            
+            const message = input.value.trim();
+            
+            if (!message || !currentSessionId) return;
+            
+            // Disable input
+            input.disabled = true;
+            sendButton.disabled = true;
+            sendButtonText.innerHTML = '<span class="loading"></span>';
+            updateProcessingStatus('Processing through both hemispheres...');
+            
+            input.value = '';
+            
+            try {
+                const startTime = Date.now();
+                
+                const response = await fetch('/api/process/dual-persona', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        session_id: currentSessionId,
+                        input: message
+                    })
+                });
+                
+                const result = await response.json();
+                const responseTime = Date.now() - startTime;
+                
+                if (result.error) {
+                    updateProcessingStatus('Error: ' + result.error);
+                    return;
+                }
+                
+                // Display dual persona responses
+                if (result.dual_persona_data) {
+                    displayDualPersonaResponse(result.dual_persona_data, message, responseTime);
+                } else {
+                    updateProcessingStatus('Received invalid response format');
+                }
+                
+            } catch (error) {
+                updateProcessingStatus('Error processing message: ' + error.message);
+            } finally {
+                // Re-enable input
+                input.disabled = false;
+                sendButton.disabled = false;
+                sendButtonText.textContent = 'Send to Both';
+                updateProcessingStatus('Ready');
+            }
+        }
+        
+        function displayDualPersonaResponse(dualData, userMessage, responseTime) {
+            messageCount++;
+            
+            // Display user message in both hemispheres
+            addUserMessage(userMessage, 'echoResponses');
+            addUserMessage(userMessage, 'mardukResponses');
+            
+            // Display Deep Tree Echo response
+            addPersonaResponse(
+                dualData.deep_tree_echo,
+                'echoResponses',
+                'echo-response',
+                '🌳',
+                'Deep Tree Echo'
+            );
+            
+            // Display Marduk response
+            addPersonaResponse(
+                dualData.marduk,
+                'mardukResponses', 
+                'marduk-response',
+                '🧬',
+                'Marduk'
+            );
+            
+            // Display reflection
+            displayReflection(dualData.reflection, dualData.synthesis, dualData.convergence_score);
+            
+            // Update convergence tracking
+            totalConvergence += dualData.convergence_score;
+            const avgConvergence = totalConvergence / messageCount;
+            document.getElementById('convergenceDisplay').textContent = `Avg Convergence: ${avgConvergence.toFixed(2)}`;
+            
+            updateProcessingStatus(`Processed in ${responseTime}ms - Convergence: ${dualData.convergence_score.toFixed(2)}`);
+        }
+        
+        function addUserMessage(message, containerId) {
+            const container = document.getElementById(containerId);
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'response-card';
+            messageDiv.style.background = '#f0f0f0';
+            messageDiv.innerHTML = `
+                <div class="response-meta">
+                    <span>👤 You</span>
+                    <span>${new Date().toLocaleTimeString()}</span>
+                </div>
+                <p><strong>${message}</strong></p>
+            `;
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        function addPersonaResponse(personaData, containerId, responseClass, icon, personaName) {
+            const container = document.getElementById(containerId);
+            const responseDiv = document.createElement('div');
+            responseDiv.className = `response-card ${responseClass}`;
+            
+            const reasoningSteps = personaData.reasoning.map(step => 
+                `<div class="reasoning-step">${step}</div>`
+            ).join('');
+            
+            responseDiv.innerHTML = `
+                <div class="response-meta">
+                    <span>${icon} ${personaName}</span>
+                    <span>${new Date().toLocaleTimeString()}</span>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" style="width: ${personaData.confidence * 100}%"></div>
+                    </div>
+                </div>
+                <p>${personaData.content}</p>
+                <div class="reasoning-process">
+                    <strong>Reasoning Process:</strong>
+                    ${reasoningSteps}
+                </div>
+                <div style="margin-top: 0.5rem; font-size: 0.8em; color: #666;">
+                    Confidence: ${(personaData.confidence * 100).toFixed(1)}% | 
+                    Processing: ${(personaData.processing_time * 1000).toFixed(1)}ms
+                </div>
+            `;
+            
+            container.appendChild(responseDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        function displayReflection(reflection, synthesis, convergenceScore) {
+            const reflectionContent = document.getElementById('reflectionContent');
+            const convergenceScoreEl = document.getElementById('convergenceScore');
+            const convergenceFill = document.getElementById('convergenceFill');
+            
+            let content = `<p><strong>Reflection:</strong></p><p>${reflection}</p>`;
+            
+            if (synthesis) {
+                content += `<p><strong>Synthesis:</strong></p><p>${synthesis}</p>`;
+            }
+            
+            reflectionContent.innerHTML = content;
+            convergenceScoreEl.textContent = convergenceScore.toFixed(2);
+            convergenceFill.style.width = `${convergenceScore * 100}%`;
+        }
+        
+        function updateProcessingStatus(status) {
+            document.getElementById('processingStatus').textContent = status;
+        }
+        
+        // Handle Enter key
+        document.getElementById('userInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendDualPersonaMessage();
+            }
+        });
+        
+        // Initialize on load
+        window.onload = function() {
+            initializeSession();
+        };
+    </script>
+</body>
+</html>
