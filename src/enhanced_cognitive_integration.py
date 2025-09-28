@@ -587,7 +587,7 @@ class EnhancedCognitiveProcessor:
                 'advanced_processing_enabled': False,
                 'enhanced_confidence': 0.6
             }
-        }
+}
 
     # Task 2.6: Explanation Generation System Methods
     def generate_reasoning_explanation(self, reasoning_data: Dict[str, Any], 

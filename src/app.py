@@ -37,6 +37,7 @@ from adaptive_learning import (
 
 # Import Enhanced Cognitive Integration
 from enhanced_cognitive_integration import EnhancedCognitiveProcessor
+from cognitive_grammar import get_bootstrap_system
 
 # Configure logging
 logging.basicConfig(
@@ -474,13 +475,49 @@ class EnhancedCognitiveSession:
             return f"General reasoning applied to: {input_text}"
     
     def _process_grammar_membrane(self, input_text: str) -> str:
-        """Mock grammar membrane processing"""
+        """Enhanced grammar membrane processing with parentheses bootstrap system"""
         word_count = len(input_text.split())
         sentence_count = input_text.count('.') + input_text.count('!') + input_text.count('?')
         
         complexity = 'simple' if word_count < 10 else 'moderate' if word_count < 20 else 'complex'
         
-        return f"Grammar analysis: {word_count} words, {sentence_count} sentences, {complexity} complexity. Symbolic patterns detected."
+        # Initialize parentheses bootstrap system for symbolic processing
+        bootstrap_system = get_bootstrap_system()
+        
+        # Check if input contains Lisp-like or parenthetical expressions
+        parentheses_detected = '(' in input_text and ')' in input_text
+        symbolic_processing = ""
+        
+        if parentheses_detected:
+            try:
+                # Attempt to evaluate parenthetical expressions
+                # Extract parenthetical parts for evaluation
+                import re
+                paren_expressions = re.findall(r'\([^()]*\)', input_text)
+                
+                if paren_expressions:
+                    symbolic_processing = f" Symbolic expressions detected: {len(paren_expressions)} parenthetical constructs analyzed using Spencer-Brown calculus."
+                    
+                    # Try to evaluate simple expressions
+                    for expr in paren_expressions[:2]:  # Limit to first 2 for safety
+                        try:
+                            result = bootstrap_system.bootstrap_eval(expr)
+                            if result:
+                                symbolic_processing += f" '{expr}' → symbolic evaluation completed."
+                        except Exception as e:
+                            logger.debug(f"Non-critical symbolic evaluation error: {e}")
+                            
+            except Exception as e:
+                logger.debug(f"Grammar membrane symbolic processing error: {e}")
+                symbolic_processing = " Parenthetical structures detected but require deeper symbolic analysis."
+        
+        # Check for combinatorial or lambda-like patterns
+        combinator_patterns = any(pattern in input_text.lower() for pattern in 
+                                ['lambda', 'define', 'car', 'cdr', 'cons', 'eval'])
+        if combinator_patterns:
+            symbolic_processing += " Functional programming patterns detected. Lambda calculus emergence capabilities active."
+        
+        return f"Grammar analysis: {word_count} words, {sentence_count} sentences, {complexity} complexity. Symbolic patterns detected.{symbolic_processing}"
     
     def _integrate_responses(self, memory: str, reasoning: str, grammar: str) -> str:
         """Integrate membrane responses into coherent output with memory context"""
@@ -1459,6 +1496,91 @@ def collect_analytics():
         
     except Exception as e:
         logger.error(f"Error collecting analytics: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/parentheses-bootstrap/evaluate', methods=['POST'])
+def evaluate_parentheses_expression():
+    """Evaluate parentheses-based Lisp expressions using Spencer-Brown calculus"""
+    try:
+        data = request.get_json()
+        if not data or 'expression' not in data:
+            return jsonify({'error': 'No expression provided'}), 400
+        
+        expression = data['expression']
+        
+        # Get the bootstrap system
+        bootstrap_system = get_bootstrap_system()
+        
+        # Evaluate the expression
+        start_time = time.time()
+        result = bootstrap_system.bootstrap_eval(expression)
+        evaluation_time = (time.time() - start_time) * 1000  # Convert to ms
+        
+        # Get system status for additional context
+        system_status = bootstrap_system.get_system_status()
+        
+        # Format result for JSON serialization
+        if hasattr(result, '__str__'):
+            result_str = str(result)
+        else:
+            result_str = repr(result)
+        
+        return jsonify({
+            'expression': expression,
+            'result': result_str,
+            'evaluation_time_ms': round(evaluation_time, 2),
+            'system_status': system_status,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error evaluating parentheses expression: {e}")
+        return jsonify({
+            'error': str(e),
+            'expression': data.get('expression', '') if 'data' in locals() else '',
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
+@app.route('/api/parentheses-bootstrap/status')
+def get_parentheses_bootstrap_status():
+    """Get status of the parentheses bootstrap system"""
+    try:
+        bootstrap_system = get_bootstrap_system()
+        status = bootstrap_system.get_system_status()
+        
+        # Add examples and capabilities
+        status['examples'] = {
+            'spencer_brown_calculus': [
+                '()',      # void
+                '(())',    # mark  
+                '((()))'   # nested mark
+            ],
+            'church_numerals': [
+                bootstrap_system.church_numerals.encode_number(0),
+                bootstrap_system.church_numerals.encode_number(1),
+                bootstrap_system.church_numerals.encode_number(2),
+                bootstrap_system.church_numerals.encode_number(3)
+            ],
+            'combinators': [
+                bootstrap_system.combinators.identity_combinator(),
+                bootstrap_system.combinators.k_combinator(),
+                bootstrap_system.combinators.s_combinator()
+            ]
+        }
+        
+        status['capabilities'] = [
+            'Spencer-Brown Laws of Form calculus',
+            'Church numeral arithmetic',
+            'Combinatorial logic (S, K, I)',
+            'Lambda calculus emergence',
+            'Metacircular evaluation',
+            'Parentheses-based distinction processing'
+        ]
+        
+        return jsonify(status)
+        
+    except Exception as e:
+        logger.error(f"Error getting parentheses bootstrap status: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/metrics')

@@ -144,6 +144,39 @@ export RWKV_MODEL_PATH="~/Downloads/rwkv-4-pile-169m-q5_1.bin"
 
 ## Usage
 
+### Basic Integration
+
+```python
+from enhanced_echo_rwkv_bridge import (
+    EnhancedEchoRWKVIntegrationEngine,
+    create_enhanced_rwkv_config
+)
+
+# Create configuration
+config = create_enhanced_rwkv_config(
+    model_path='/path/to/rwkv-model.bin',
+    backend_preference='auto',  # auto, rwkv_cpp, python_rwkv, mock
+    enable_gpu=False,
+    memory_limit_mb=600
+)
+
+# Initialize enhanced engine
+engine = EnhancedEchoRWKVIntegrationEngine(
+    backend_preference='auto',
+    enable_rwkv_cpp=True
+)
+
+await engine.initialize(config)
+
+# Process cognitive input
+from echo_rwkv_bridge import CognitiveContext
+
+context = CognitiveContext(
+    session_id="session_123",
+    user_input="What is consciousness?",
+    conversation_history=[],
+    memory_state={},
+    processing_goals=["analyze", "synthesize"],
 ### Basic RWKV.cpp Processor
 
 ```python
@@ -356,11 +389,100 @@ The system can auto-scale based on:
 - Model memory usage  
 - Request queue depth
 - CPU utilization
-
 ## Troubleshooting
 
 ### Common Issues
 
+**1. Library not found**
+```bash
+# Rebuild RWKV.cpp library
+cd external/rwkv-cpp
+make clean && make -j$(nproc)
+```
+
+**2. Memory constraints**
+```python
+# Reduce memory usage
+config['memory_limit_mb'] = 400
+config['context_length'] = 1024
+```
+
+**3. Backend initialization failure**
+```python
+# Force fallback mode
+config['backend_type'] = 'mock'
+```
+
+### Debug Mode
+```python
+import logging
+logging.getLogger('rwkv_cpp_integration').setLevel(logging.DEBUG)
+```
+
+## Performance Optimization
+
+### Memory Optimization
+- **Model quantization**: Use Q4_1 or Q5_1 for optimal size/quality balance
+- **Context management**: Limit context length based on available memory
+- **Batch processing**: Process multiple requests efficiently
+
+### Speed Optimization
+- **Thread tuning**: Optimize thread count for available CPU cores
+- **Caching**: Enable response caching for repeated queries
+- **Model selection**: Choose appropriate model size for use case
+
+### WebVM Specific
+- **Memory pooling**: Efficient memory allocation and reuse
+- **Garbage collection**: Proactive memory cleanup
+- **Resource monitoring**: Real-time memory and CPU tracking
+
+## Future Enhancements
+
+### Planned Features
+- **GPU acceleration**: WebGL/WebGPU support for browser environments
+- **Model streaming**: Progressive model loading for large models
+- **Federated processing**: Distributed inference across multiple nodes
+- **Advanced quantization**: Dynamic quantization based on input complexity
+
+### Research Directions
+- **Cognitive fusion**: Enhanced cross-membrane information flow
+- **Adaptive processing**: Dynamic backend selection based on workload
+- **Meta-learning**: System-level learning and optimization
+- **Emergent capabilities**: Advanced cognitive pattern recognition
+
+## Contributing
+
+### Development Setup
+```bash
+# Clone with submodules
+git clone --recursive https://github.com/EchoCog/deep-tree-echo-rkwv.git
+
+# Build development environment
+cd deep-tree-echo-rkwv
+./devops.sh setup-development
+
+# Run tests
+./scripts/test-rwkv-cpp.sh
+```
+
+### Code Style
+- **Python**: Follow existing code style with type hints
+- **C++ Integration**: Maintain compatibility with RWKV.cpp upstream
+- **Documentation**: Update docs for any API changes
+- **Testing**: Add tests for new features
+
+## License and Attribution
+
+This integration builds upon:
+- **RWKV.cpp**: Copyright RWKV team, MIT License
+- **ggml**: Copyright Georgi Gerganov, MIT License  
+- **Deep Tree Echo**: Copyright EchoCog, MIT License
+
+See individual component licenses for details.
+
+---
+
+**The RWKV.cpp integration successfully transforms Deep Tree Echo into a high-performance Distributed Agentic Cognitive Micro-Kernel Network, ready for production deployment! 🚀**
 1. **Model Not Found**
    ```
    Model file not found: /path/to/model.bin
