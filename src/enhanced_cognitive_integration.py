@@ -23,31 +23,7 @@ from adaptive_learning import (
     CognitiveStrategyLearner, UserPreference, FeedbackEntry
 )
 
-# Import Task 2.6 and 2.7 Enhanced Components
-from explanation_generation import (
-    ExplanationGenerator, ExplanationRequest, ExplanationStyle, ExplanationLevel,
-    GeneratedExplanation
-)
-from enhanced_preference_learning import (
-    EnhancedPersonalizationEngine, CommunicationStyle, InteractionPattern,
-    LearningStrategy
-)
-
-logger = logging.getLogger(__name__)
-
-class EnhancedCognitiveProcessor:
-    """Enhanced cognitive processor integrating Phase 2 capabilities"""
-    
-    def __init__(self, persistent_memory=None):
-        self.persistent_memory = persistent_memory
-        
-        # Initialize Phase 2 systems
-        try:
-            self.meta_cognitive_system = MetaCognitiveReflectionSystem()
-            self.complex_reasoning_system = ComplexReasoningSystem()
-            self.adaptive_learning_system = AdaptiveLearningSystem()
-            
-            # Initialize Task 2.6 and 2.7 Enhanced Systems
+# Initialize Task 2.6 and 2.7 Enhanced Systems
             self.explanation_generator = ExplanationGenerator()
             self.enhanced_personalization_engine = EnhancedPersonalizationEngine()
             
@@ -481,7 +457,7 @@ class EnhancedCognitiveProcessor:
                 'advanced_processing_enabled': False,
                 'enhanced_confidence': 0.6
             }
-        }
+}
 
     # Task 2.6: Explanation Generation System Methods
     def generate_reasoning_explanation(self, reasoning_data: Dict[str, Any], 
