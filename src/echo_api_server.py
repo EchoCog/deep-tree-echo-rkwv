@@ -21,6 +21,14 @@ except ImportError:
     INTEGRATION_AVAILABLE = False
     print("Warning: RWKV-Echo integration not available")
 
+# Import EchoLisp for echo structure generation
+try:
+    from echo_lisp import EchoLisp
+    ECHO_LISP_AVAILABLE = True
+except ImportError:
+    ECHO_LISP_AVAILABLE = False
+    print("Warning: EchoLisp not available")
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -540,6 +548,143 @@ def health_check():
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
         'echo_system_initialized': system_status['initialized']
+    })
+
+# EchoLisp API Endpoints
+@app.route('/api/echo_lisp/simulate', methods=['POST'])
+def echo_lisp_simulate():
+    """Generate echo structure evolution simulation"""
+    global system_status
+    
+    if not ECHO_LISP_AVAILABLE:
+        return jsonify({'error': 'EchoLisp not available'}), 500
+    
+    try:
+        data = request.get_json() or {}
+        n = data.get('n', 4)  # Default to n=4 as in the problem statement
+        
+        # Validate input
+        if not isinstance(n, int) or n < 1 or n > 20:  # Reasonable upper limit
+            return jsonify({'error': 'n must be an integer between 1 and 20'}), 400
+        
+        # Create EchoLisp instance and run simulation
+        echo_lisp = EchoLisp()
+        results = echo_lisp.simulate(n)
+        
+        # Format results
+        steps = []
+        for step, structure in results:
+            steps.append({
+                'step': step,
+                'structure': structure
+            })
+        
+        response = {
+            'n': n,
+            'steps': steps,
+            'total_structures_tracked': echo_lisp.get_tree_id_count(),
+            'tree_id_mappings': {
+                echo_lisp.tostr(structure): tree_id 
+                for structure, tree_id in echo_lisp.get_tree_ids().items()
+            },
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        system_status['total_requests'] += 1
+        system_status['last_activity'] = datetime.now().isoformat()
+        
+        return jsonify(response)
+        
+    except Exception as e:
+        logger.error(f"Error in echo_lisp_simulate: {e}")
+        system_status['error_count'] += 1
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/echo_lisp/successors', methods=['POST'])
+def echo_lisp_successors():
+    """Generate successors for a given echo structure"""
+    global system_status
+    
+    if not ECHO_LISP_AVAILABLE:
+        return jsonify({'error': 'EchoLisp not available'}), 500
+    
+    try:
+        data = request.get_json() or {}
+        structure_str = data.get('structure', '()')
+        
+        # Create EchoLisp instance
+        echo_lisp = EchoLisp()
+        
+        # Parse structure string to tuple (simple parser for this demo)
+        # For now, we'll support a few common structures
+        structure_map = {
+            '()': (),
+            '(())': ((),),
+            '(()())': ((), ()),
+            '((()))': (((),),),
+            '(()()())': ((), (), ()),
+            '(()(()))': ((), ((),)),
+            '((()()))': ((((),),),),
+            '(((()))': ((((),),),)
+        }
+        
+        if structure_str not in structure_map:
+            return jsonify({'error': f'Unsupported structure format: {structure_str}'}), 400
+        
+        structure = structure_map[structure_str]
+        
+        # Generate successors
+        successors = list(echo_lisp.succ(structure))
+        
+        response = {
+            'input_structure': structure_str,
+            'successors': [echo_lisp.tostr(succ) for succ in successors],
+            'successor_count': len(successors),
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        system_status['total_requests'] += 1
+        system_status['last_activity'] = datetime.now().isoformat()
+        
+        return jsonify(response)
+        
+    except Exception as e:
+        logger.error(f"Error in echo_lisp_successors: {e}")
+        system_status['error_count'] += 1
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/echo_lisp/info')
+def echo_lisp_info():
+    """Get information about EchoLisp capabilities"""
+    return jsonify({
+        'available': ECHO_LISP_AVAILABLE,
+        'description': 'Echo Structure Generation and Evolution System',
+        'capabilities': [
+            'Generate echo structure evolution simulations',
+            'Calculate successors for echo structures',
+            'Track tree IDs for generated structures',
+            'Convert structures to Lisp-style string representation'
+        ],
+        'endpoints': {
+            '/api/echo_lisp/simulate': 'POST - Generate echo evolution simulation',
+            '/api/echo_lisp/successors': 'POST - Get successors for a structure',
+            '/api/echo_lisp/info': 'GET - Get system information'
+        },
+        'example_usage': {
+            'simulate': {
+                'method': 'POST',
+                'url': '/api/echo_lisp/simulate',
+                'body': {'n': 4},
+                'description': 'Generate 4-step echo evolution'
+            },
+            'successors': {
+                'method': 'POST', 
+                'url': '/api/echo_lisp/successors',
+                'body': {'structure': '(())'},
+                'description': 'Get successors for structure (())'
+            }
+        },
+        'timestamp': datetime.now().isoformat()
     })
 
 # Error handlers
