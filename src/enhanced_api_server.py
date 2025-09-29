@@ -13,7 +13,7 @@ from typing import Dict, Any, Optional
 
 # Import our API ecosystem components
 from api.rest_api import create_enhanced_api_blueprint, setup_flask_limiter
-from api.graphql_api import create_graphql_blueprint
+from api.simple_graphql import create_simple_graphql_blueprint
 from api.documentation import create_documentation_blueprint
 from integrations.base import IntegrationManager, IntegrationEvent, create_webhook_integration
 from plugins.base import plugin_registry
@@ -157,7 +157,7 @@ class EnhancedEchoServer:
         self.app.register_blueprint(api_v2)
         
         # Register GraphQL blueprint
-        graphql_bp = create_graphql_blueprint()
+        graphql_bp = create_simple_graphql_blueprint(self.echo_system)
         self.app.register_blueprint(graphql_bp)
         
         # Register documentation blueprint
