@@ -214,11 +214,12 @@ class EnhancedRWKVInterface(RWKVModelInterface):
             # Update performance metrics
             processing_time = (datetime.now() - start_time).total_seconds()
             self._update_performance_metrics(self.active_backend, processing_time)
-Enhanced Echo RWKV Bridge
-
-Multi-backend architecture with automatic selection and performance monitoring
-for the Deep Tree Echo framework.
-"""
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f"Error generating response with backend {self.active_backend}: {e}")
+            return f"Error: {str(e)}"
 
 import logging
 import time
@@ -636,15 +637,15 @@ class EnhancedEchoRWKVBridge:
             return response
             
         except Exception as e:
-logger.error(f"Error generating response with {self.active_backend} backend: {e}")
+            logger.error(f"Error generating response with {self.active_backend} backend: {e}")
             
             # Try fallback to mock backend if available
             if self.active_backend != 'mock' and 'mock' in self.backends:
                 logger.info("Falling back to mock backend")
                 try:
                     mock_backend = self.backends['mock']
-                    response = await mock_backend.generate_response(prompt, context)
-                    processing_time = (datetime.now() - start_time).total_seconds()
+                    response = mock_backend.generate(prompt, **kwargs)
+                    processing_time = time.time() - start_time
                     self._update_performance_metrics('mock', processing_time)
                     return f"[Fallback] {response}"
                 except:
@@ -969,11 +970,6 @@ def create_enhanced_rwkv_config(
         'enable_advanced_cognitive': True,
         'enable_rwkv_cpp_bridge': True
     }
-logger.error(f"Error generating with backend {selected_backend.value}: {e}")
-            with self._lock:
-                metrics.requests_total += 1
-                metrics.requests_failed += 1
-            return None
     
     def get_status(self) -> Dict[str, Any]:
         """Get comprehensive status information"""

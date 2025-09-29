@@ -366,11 +366,6 @@ async def demo_simple_rwkv():
 
 if __name__ == "__main__":
     asyncio.run(demo_simple_rwkv())
-Simple RWKV Integration
-
-Simplified RWKV integration using pip package for easy setup and usage
-within the Deep Tree Echo framework.
-"""
 
 import logging
 import os
